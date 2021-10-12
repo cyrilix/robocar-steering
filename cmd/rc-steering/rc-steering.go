@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"github.com/cyrilix/robocar-base/cli"
-	"github.com/cyrilix/robocar-steering/part"
-	"log"
+	"github.com/cyrilix/robocar-steering/pkg/part"
 	"go.uber.org/zap"
+	"log"
 	"os"
 )
 
