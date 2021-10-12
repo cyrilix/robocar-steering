@@ -5,7 +5,7 @@ import (
 	"github.com/cyrilix/robocar-protobuf/go/events"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/golang/protobuf/proto"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 	"sync"
 )
 
@@ -34,7 +34,7 @@ type SteeringPart struct {
 
 func (p *SteeringPart) Start() error {
 	if err := registerCallbacks(p); err != nil {
-		log.Infof("unable to rgeister callbacks: %v", err)
+		zap.S().Errorf("unable to rgeister callbacks: %v", err)
 		return err
 	}
 
@@ -52,7 +52,7 @@ func (p *SteeringPart) onDriveMode(_ mqtt.Client, message mqtt.Message) {
 	var msg events.DriveModeMessage
 	err := proto.Unmarshal(message.Payload(), &msg)
 	if err != nil {
-		log.Errorf("unable to unmarshal protobuf %T message: %v", msg, err)
+		zap.S().Errorf("unable to unmarshal protobuf %T message: %v", msg, err)
 		return
 	}
 
@@ -64,7 +64,7 @@ func (p *SteeringPart) onDriveMode(_ mqtt.Client, message mqtt.Message) {
 func (p *SteeringPart) onRCSteering(_ mqtt.Client, message mqtt.Message) {
 	p.muDriveMode.RLock()
 	defer p.muDriveMode.RUnlock()
-	log.Debugf("receive steering message from radio command: %v",message)
+	zap.S().Debugf("receive steering message from radio command: %v",message)
 	if p.driveMode == events.DriveMode_USER {
 		// Republish same content
 		payload := message.Payload()
@@ -74,7 +74,7 @@ func (p *SteeringPart) onRCSteering(_ mqtt.Client, message mqtt.Message) {
 func (p *SteeringPart) onTFSteering(_ mqtt.Client, message mqtt.Message) {
 	p.muDriveMode.RLock()
 	defer p.muDriveMode.RUnlock()
-	log.Debugf("receive steering message from tensorflow: %v",message)
+	zap.S().Debugf("receive steering message from tensorflow: %v",message)
 	if p.driveMode == events.DriveMode_PILOT {
 		// Republish same content
 		payload := message.Payload()
