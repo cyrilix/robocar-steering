@@ -59,7 +59,7 @@ func main() {
 	}
 	defer client.Disconnect(50)
 
-	p := part.NewPart(client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic)
+	p := part.NewPart(client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, debug)
 	defer p.Stop()
 
 	cli.HandleExit(p)

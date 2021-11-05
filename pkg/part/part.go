@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-func NewPart(client mqtt.Client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic string) *SteeringPart {
+func NewPart(client mqtt.Client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic string, debug bool) *SteeringPart {
 	return &SteeringPart{
 		client:          client,
 		steeringTopic:   steeringTopic,
@@ -17,6 +17,7 @@ func NewPart(client mqtt.Client, steeringTopic, driveModeTopic, rcSteeringTopic,
 		rcSteeringTopic: rcSteeringTopic,
 		tfSteeringTopic: tfSteeringTopic,
 		driveMode:       events.DriveMode_USER,
+		debug:           debug,
 	}
 
 }
@@ -30,6 +31,8 @@ type SteeringPart struct {
 
 	cancel                                           chan interface{}
 	driveModeTopic, rcSteeringTopic, tfSteeringTopic string
+
+	debug bool
 }
 
 func (p *SteeringPart) Start() error {
@@ -64,7 +67,15 @@ func (p *SteeringPart) onDriveMode(_ mqtt.Client, message mqtt.Message) {
 func (p *SteeringPart) onRCSteering(_ mqtt.Client, message mqtt.Message) {
 	p.muDriveMode.RLock()
 	defer p.muDriveMode.RUnlock()
-	zap.S().Debugf("receive steering message from radio command: %v",message)
+	if p.debug {
+		var evt events.SteeringMessage
+		err := proto.Unmarshal(message.Payload(), &evt)
+		if err != nil {
+			zap.S().Debugf("unable to unmarshal rc event: %v", err)
+		}else {
+			zap.S().Debugf("receive steering message from radio command: %0.00f", evt.GetSteering())
+		}
+	}
 	if p.driveMode == events.DriveMode_USER {
 		// Republish same content
 		payload := message.Payload()
@@ -74,7 +85,15 @@ func (p *SteeringPart) onRCSteering(_ mqtt.Client, message mqtt.Message) {
 func (p *SteeringPart) onTFSteering(_ mqtt.Client, message mqtt.Message) {
 	p.muDriveMode.RLock()
 	defer p.muDriveMode.RUnlock()
-	zap.S().Debugf("receive steering message from tensorflow: %v",message)
+	if p.debug {
+		var evt events.SteeringMessage
+		err := proto.Unmarshal(message.Payload(), &evt)
+		if err != nil {
+			zap.S().Debugf("unable to unmarshal tensorflow event: %v", err)
+		}else {
+			zap.S().Debugf("receive steering message from tensorflow: %0.00f", evt.GetSteering())
+		}
+	}
 	if p.driveMode == events.DriveMode_PILOT {
 		// Republish same content
 		payload := message.Payload()
