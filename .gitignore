@@ -282,5 +282,5 @@ local.properties
 !.vscode/extensions.json
 *.code-workspace
 
-./rc-steering
+./build/
 
