@@ -28,20 +28,17 @@ func main() {
 	flag.StringVar(&tfSteeringTopic, "mqtt-topic-tf-steering", os.Getenv("MQTT_TOPIC_TF_STEERING"), "Mqtt topic that contains tenorflow steering value, use MQTT_TOPIC_TF_STEERING if args not set")
 	flag.StringVar(&driveModeTopic, "mqtt-topic-drive-mode", os.Getenv("MQTT_TOPIC_DRIVE_MODE"), "Mqtt topic that contains DriveMode value, use MQTT_TOPIC_DRIVE_MODE if args not set")
 
-	flag.BoolVar(&debug, "debug", false, "Display raw value to debug")
+	logLevel := zap.LevelFlag("log", zap.InfoLevel, "log level")
 
 	flag.Parse()
+
 	if len(os.Args) <= 1 {
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
 	config := zap.NewDevelopmentConfig()
-	if debug {
-		config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	} else {
-		config.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
-	}
+	config.Level = zap.NewAtomicLevelAt(*logLevel)
 	lgr, err := config.Build()
 	if err != nil {
 		log.Fatalf("unable to init logger: %v", err)
@@ -53,6 +50,7 @@ func main() {
 	}()
 	zap.ReplaceGlobals(lgr)
 
+	debug = logLevel.Enabled(zap.DebugLevel)
 	client, err := cli.Connect(mqttBroker, username, password, clientId)
 	if err != nil {
 		log.Fatalf("unable to connect to mqtt bus: %v", err)

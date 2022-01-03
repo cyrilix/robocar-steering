@@ -34,7 +34,7 @@ func TestDefaultSteering(t *testing.T) {
 	rcSteeringTopic := "topic/rcSteering"
 	tfSteeringTopic := "topic/tfSteering"
 
-	p := NewPart(nil, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic)
+	p := NewPart(nil, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, true)
 
 	cases := []struct {
 		driveMode        events.DriveModeMessage

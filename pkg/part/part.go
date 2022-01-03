@@ -17,7 +17,6 @@ func NewPart(client mqtt.Client, steeringTopic, driveModeTopic, rcSteeringTopic,
 		rcSteeringTopic: rcSteeringTopic,
 		tfSteeringTopic: tfSteeringTopic,
 		driveMode:       events.DriveMode_USER,
-		debug:           debug,
 	}
 
 }
@@ -72,7 +71,7 @@ func (p *SteeringPart) onRCSteering(_ mqtt.Client, message mqtt.Message) {
 		err := proto.Unmarshal(message.Payload(), &evt)
 		if err != nil {
 			zap.S().Debugf("unable to unmarshal rc event: %v", err)
-		}else {
+		} else {
 			zap.S().Debugf("receive steering message from radio command: %0.00f", evt.GetSteering())
 		}
 	}
@@ -90,7 +89,7 @@ func (p *SteeringPart) onTFSteering(_ mqtt.Client, message mqtt.Message) {
 		err := proto.Unmarshal(message.Payload(), &evt)
 		if err != nil {
 			zap.S().Debugf("unable to unmarshal tensorflow event: %v", err)
-		}else {
+		} else {
 			zap.S().Debugf("receive steering message from tensorflow: %0.00f", evt.GetSteering())
 		}
 	}
