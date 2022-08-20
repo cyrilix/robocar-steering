@@ -17,7 +17,7 @@ func TestDefaultSteering(t *testing.T) {
 		registerCallbacks = oldRegister
 		publish = oldPublish
 	}()
-	registerCallbacks = func(p *SteeringController) error {
+	registerCallbacks = func(p *Controller) error {
 		return nil
 	}
 
@@ -104,7 +104,7 @@ func TestDefaultSteering(t *testing.T) {
 
 			if msg.GetSteering() != c.expectedSteering.GetSteering() {
 				t.Errorf("bad msg value for mode %v: %v, wants %v",
-					c.driveMode, msg.GetSteering(), c.expectedSteering.GetSteering())
+					c.driveMode.String(), msg.GetSteering(), c.expectedSteering.GetSteering())
 			}
 			if msg.GetConfidence() != 1. {
 				t.Errorf("bad throtlle confidence: %v, wants %v", msg.GetConfidence(), 1.)

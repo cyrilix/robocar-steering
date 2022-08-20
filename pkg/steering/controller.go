@@ -9,8 +9,8 @@ import (
 	"sync"
 )
 
-func NewController(client mqtt.Client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic string, debug bool) *SteeringController {
-	return &SteeringController{
+func NewController(client mqtt.Client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic string, debug bool) *Controller {
+	return &Controller{
 		client:          client,
 		steeringTopic:   steeringTopic,
 		driveModeTopic:  driveModeTopic,
@@ -21,7 +21,7 @@ func NewController(client mqtt.Client, steeringTopic, driveModeTopic, rcSteering
 
 }
 
-type SteeringController struct {
+type Controller struct {
 	client        mqtt.Client
 	steeringTopic string
 
@@ -34,7 +34,7 @@ type SteeringController struct {
 	debug bool
 }
 
-func (p *SteeringController) Start() error {
+func (p *Controller) Start() error {
 	if err := registerCallbacks(p); err != nil {
 		zap.S().Errorf("unable to rgeister callbacks: %v", err)
 		return err
@@ -45,12 +45,12 @@ func (p *SteeringController) Start() error {
 	return nil
 }
 
-func (p *SteeringController) Stop() {
+func (p *Controller) Stop() {
 	close(p.cancel)
 	service.StopService("throttle", p.client, p.driveModeTopic, p.rcSteeringTopic, p.tfSteeringTopic)
 }
 
-func (p *SteeringController) onDriveMode(_ mqtt.Client, message mqtt.Message) {
+func (p *Controller) onDriveMode(_ mqtt.Client, message mqtt.Message) {
 	var msg events.DriveModeMessage
 	err := proto.Unmarshal(message.Payload(), &msg)
 	if err != nil {
@@ -63,7 +63,7 @@ func (p *SteeringController) onDriveMode(_ mqtt.Client, message mqtt.Message) {
 	p.driveMode = msg.GetDriveMode()
 }
 
-func (p *SteeringController) onRCSteering(_ mqtt.Client, message mqtt.Message) {
+func (p *Controller) onRCSteering(_ mqtt.Client, message mqtt.Message) {
 	p.muDriveMode.RLock()
 	defer p.muDriveMode.RUnlock()
 	if p.debug {
@@ -81,7 +81,7 @@ func (p *SteeringController) onRCSteering(_ mqtt.Client, message mqtt.Message) {
 		publish(p.client, p.steeringTopic, &payload)
 	}
 }
-func (p *SteeringController) onTFSteering(_ mqtt.Client, message mqtt.Message) {
+func (p *Controller) onTFSteering(_ mqtt.Client, message mqtt.Message) {
 	p.muDriveMode.RLock()
 	defer p.muDriveMode.RUnlock()
 	if p.debug {
@@ -100,7 +100,7 @@ func (p *SteeringController) onTFSteering(_ mqtt.Client, message mqtt.Message) {
 	}
 }
 
-var registerCallbacks = func(p *SteeringController) error {
+var registerCallbacks = func(p *Controller) error {
 	err := service.RegisterCallback(p.client, p.driveModeTopic, p.onDriveMode)
 	if err != nil {
 		return err
