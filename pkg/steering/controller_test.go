@@ -1,4 +1,4 @@
-package part
+package steering
 
 import (
 	"github.com/cyrilix/robocar-base/testtools"
@@ -17,7 +17,7 @@ func TestDefaultSteering(t *testing.T) {
 		registerCallbacks = oldRegister
 		publish = oldPublish
 	}()
-	registerCallbacks = func(p *SteeringPart) error {
+	registerCallbacks = func(p *SteeringController) error {
 		return nil
 	}
 
@@ -34,7 +34,7 @@ func TestDefaultSteering(t *testing.T) {
 	rcSteeringTopic := "topic/rcSteering"
 	tfSteeringTopic := "topic/tfSteering"
 
-	p := NewPart(nil, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, true)
+	p := NewController(nil, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, true)
 
 	cases := []struct {
 		driveMode        events.DriveModeMessage

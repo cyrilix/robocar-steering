@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/cyrilix/robocar-base/cli"
-	"github.com/cyrilix/robocar-steering/pkg/part"
+	"github.com/cyrilix/robocar-steering/pkg/steering"
 	"go.uber.org/zap"
 	"log"
 	"os"
@@ -57,7 +57,7 @@ func main() {
 	}
 	defer client.Disconnect(50)
 
-	p := part.NewPart(client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, debug)
+	p := steering.NewController(client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, debug)
 	defer p.Stop()
 
 	cli.HandleExit(p)
