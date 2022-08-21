@@ -3,10 +3,10 @@ package steering
 import (
 	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 	"gocv.io/x/gocv"
 	"image"
 	"image/color"
-	_ "image/jpeg"
 	"os"
 	"reflect"
 	"testing"
@@ -21,6 +21,51 @@ type BBox struct {
 	Bottom     float32 `json:"bottom"`
 	Right      float32 `json:"right"`
 	Confidence float32 `json:"confidence"`
+}
+
+var (
+	bboxes1 []image.Rectangle
+	bboxes2 []image.Rectangle
+	bboxes3 []image.Rectangle
+	bboxes4 []image.Rectangle
+)
+
+func init() {
+	img1, bb, err := load_data("01")
+	if err != nil {
+		zap.S().Panicf("unable to load data test: %w", err)
+	}
+	defer img1.Close()
+	bboxes1 = bboxesToRectangles(bb, img1.Cols(), img1.Rows())
+
+	img2, bb, err := load_data("02")
+	if err != nil {
+		zap.S().Panicf("unable to load data test: %w", err)
+	}
+	defer img2.Close()
+	bboxes2 = bboxesToRectangles(bb, img2.Cols(), img2.Rows())
+
+	img3, bb, err := load_data("03")
+	if err != nil {
+		zap.S().Panicf("unable to load data test: %w", err)
+	}
+	defer img3.Close()
+	bboxes3 = bboxesToRectangles(bb, img3.Cols(), img3.Rows())
+
+	img4, bb, err := load_data("04")
+	if err != nil {
+		zap.S().Panicf("unable to load data test: %w", err)
+	}
+	defer img4.Close()
+	bboxes4 = bboxesToRectangles(bb, img4.Cols(), img4.Rows())
+}
+
+func bboxesToRectangles(bboxes []BBox, imgWidth, imgHeiht int) []image.Rectangle {
+	rects := make([]image.Rectangle, 0, len(bboxes))
+	for _, bb := range bboxes {
+		rects = append(rects, bb.toRect(imgWidth, imgHeiht))
+	}
+	return rects
 }
 
 func (bb *BBox) toRect(imgWidth, imgHeight int) image.Rectangle {
@@ -144,14 +189,20 @@ func TestDisplayBBox(t *testing.T) {
 
 func TestGroupBBoxes(t *testing.T) {
 	type args struct {
-		bboxes []*image.Rectangle
+		bboxes []image.Rectangle
 	}
 	tests := []struct {
 		name string
 		args args
-		want []*image.Rectangle
+		want []image.Rectangle
 	}{
-		// TODO: Add test cases.
+		{
+			name: "data-01",
+			args: args{
+				bboxes: bboxes1,
+			},
+			want: []image.Rectangle{image.Rectangle{Min: image.Point{X: 1, Y: 2}, Max: image.Point{X: 3, Y: 4}}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
