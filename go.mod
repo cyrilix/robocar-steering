@@ -4,9 +4,10 @@ go 1.18
 
 require (
 	github.com/cyrilix/robocar-base v0.1.7
-	github.com/cyrilix/robocar-protobuf/go v1.0.5
+	github.com/cyrilix/robocar-protobuf/go v1.1.0
 	github.com/eclipse/paho.mqtt.golang v1.4.1
 	go.uber.org/zap v1.21.0
+	gocv.io/x/gocv v0.31.0
 	google.golang.org/protobuf v1.28.0
 )
 

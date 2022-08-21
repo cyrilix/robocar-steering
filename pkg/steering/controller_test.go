@@ -33,50 +33,58 @@ func TestDefaultSteering(t *testing.T) {
 	driveModeTopic := "topic/driveMode"
 	rcSteeringTopic := "topic/rcSteering"
 	tfSteeringTopic := "topic/tfSteering"
+	objectsTopic := "topic/objects"
 
-	p := NewController(nil, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, true)
+	p := NewController(nil, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, objectsTopic)
 
 	cases := []struct {
 		driveMode        events.DriveModeMessage
 		rcSteering       events.SteeringMessage
 		tfSteering       events.SteeringMessage
 		expectedSteering events.SteeringMessage
+		objects          events.ObjectsMessage
 	}{
 		{
 			events.DriveModeMessage{DriveMode: events.DriveMode_USER},
 			events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
+			events.ObjectsMessage{},
 		},
 		{
 			events.DriveModeMessage{DriveMode: events.DriveMode_PILOT},
 			events.SteeringMessage{Steering: 0.5, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.6, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.6, Confidence: 1.0},
+			events.ObjectsMessage{},
 		},
 		{
 			events.DriveModeMessage{DriveMode: events.DriveMode_PILOT},
 			events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.7, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.7, Confidence: 1.0},
+			events.ObjectsMessage{},
 		},
 		{
 			events.DriveModeMessage{DriveMode: events.DriveMode_USER},
 			events.SteeringMessage{Steering: 0.5, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.8, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.5, Confidence: 1.0},
+			events.ObjectsMessage{},
 		},
 		{
 			events.DriveModeMessage{DriveMode: events.DriveMode_USER},
 			events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.9, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
+			events.ObjectsMessage{},
 		},
 		{
 			events.DriveModeMessage{DriveMode: events.DriveMode_USER},
 			events.SteeringMessage{Steering: 0.6, Confidence: 1.0},
 			events.SteeringMessage{Steering: -0.3, Confidence: 1.0},
 			events.SteeringMessage{Steering: 0.6, Confidence: 1.0},
+			events.ObjectsMessage{},
 		},
 	}
 
@@ -88,6 +96,7 @@ func TestDefaultSteering(t *testing.T) {
 		p.onDriveMode(nil, testtools.NewFakeMessageFromProtobuf(driveModeTopic, &c.driveMode))
 		p.onRCSteering(nil, testtools.NewFakeMessageFromProtobuf(rcSteeringTopic, &c.rcSteering))
 		p.onTFSteering(nil, testtools.NewFakeMessageFromProtobuf(tfSteeringTopic, &c.tfSteering))
+		p.onObjects(nil, testtools.NewFakeMessageFromProtobuf(objectsTopic, &c.objects))
 
 		time.Sleep(10 * time.Millisecond)
 

@@ -9,13 +9,14 @@ import (
 	"sync"
 )
 
-func NewController(client mqtt.Client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic string, debug bool) *Controller {
+func NewController(client mqtt.Client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, objectsTopic string) *Controller {
 	return &Controller{
 		client:          client,
 		steeringTopic:   steeringTopic,
 		driveModeTopic:  driveModeTopic,
 		rcSteeringTopic: rcSteeringTopic,
 		tfSteeringTopic: tfSteeringTopic,
+		objectsTopic:    objectsTopic,
 		driveMode:       events.DriveMode_USER,
 	}
 
@@ -28,8 +29,11 @@ type Controller struct {
 	muDriveMode sync.RWMutex
 	driveMode   events.DriveMode
 
-	cancel                                           chan interface{}
-	driveModeTopic, rcSteeringTopic, tfSteeringTopic string
+	cancel                                                         chan interface{}
+	driveModeTopic, rcSteeringTopic, tfSteeringTopic, objectsTopic string
+
+	muObjects sync.RWMutex
+	objects   []*events.Object
 
 	debug bool
 }
@@ -48,6 +52,19 @@ func (p *Controller) Start() error {
 func (p *Controller) Stop() {
 	close(p.cancel)
 	service.StopService("throttle", p.client, p.driveModeTopic, p.rcSteeringTopic, p.tfSteeringTopic)
+}
+
+func (p *Controller) onObjects(_ mqtt.Client, message mqtt.Message) {
+	var msg events.ObjectsMessage
+	err := proto.Unmarshal(message.Payload(), &msg)
+	if err != nil {
+		zap.S().Errorf("unable to unmarshal protobuf %T message: %v", msg, err)
+		return
+	}
+
+	p.muObjects.Lock()
+	defer p.muObjects.Unlock()
+	p.objects = msg.GetObjects()
 }
 
 func (p *Controller) onDriveMode(_ mqtt.Client, message mqtt.Message) {
@@ -112,6 +129,11 @@ var registerCallbacks = func(p *Controller) error {
 	}
 
 	err = service.RegisterCallback(p.client, p.tfSteeringTopic, p.onTFSteering)
+	if err != nil {
+		return err
+	}
+
+	err = service.RegisterCallback(p.client, p.objectsTopic, p.onObjects)
 	if err != nil {
 		return err
 	}
