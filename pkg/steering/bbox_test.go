@@ -24,40 +24,24 @@ type BBox struct {
 }
 
 var (
-	bboxes1 []image.Rectangle
-	bboxes2 []image.Rectangle
-	bboxes3 []image.Rectangle
-	bboxes4 []image.Rectangle
+	dataBBoxes map[string][]image.Rectangle
+	dataImages map[string]*gocv.Mat
 )
 
 func init() {
-	img1, bb, err := load_data("01")
-	if err != nil {
-		zap.S().Panicf("unable to load data test: %w", err)
-	}
-	defer img1.Close()
-	bboxes1 = bboxesToRectangles(bb, img1.Cols(), img1.Rows())
+	// TODO: empty img without bbox
+	dataNames := []string{"01", "02", "03", "04"}
+	dataBBoxes = make(map[string][]image.Rectangle, len(dataNames))
+	dataImages = make(map[string]*gocv.Mat, len(dataNames))
 
-	img2, bb, err := load_data("02")
-	if err != nil {
-		zap.S().Panicf("unable to load data test: %w", err)
+	for _, dataName := range dataNames {
+		img, bb, err := load_data(dataName)
+		if err != nil {
+			zap.S().Panicf("unable to load data test: %v", err)
+		}
+		dataBBoxes[dataName] = bboxesToRectangles(bb, img.Cols(), img.Rows())
+		dataImages[dataName] = img
 	}
-	defer img2.Close()
-	bboxes2 = bboxesToRectangles(bb, img2.Cols(), img2.Rows())
-
-	img3, bb, err := load_data("03")
-	if err != nil {
-		zap.S().Panicf("unable to load data test: %w", err)
-	}
-	defer img3.Close()
-	bboxes3 = bboxesToRectangles(bb, img3.Cols(), img3.Rows())
-
-	img4, bb, err := load_data("04")
-	if err != nil {
-		zap.S().Panicf("unable to load data test: %w", err)
-	}
-	defer img4.Close()
-	bboxes4 = bboxesToRectangles(bb, img4.Cols(), img4.Rows())
 }
 
 func bboxesToRectangles(bboxes []BBox, imgWidth, imgHeiht int) []image.Rectangle {
@@ -117,6 +101,12 @@ func drawImage(img *gocv.Mat, bboxes []BBox) {
 	}
 }
 
+func drawRectangles(img *gocv.Mat, rects []image.Rectangle, c color.RGBA) {
+	for _, r := range rects {
+		gocv.Rectangle(img, r, c, 2)
+	}
+}
+
 func saveImage(name string, img *gocv.Mat) error {
 	err := os.MkdirAll("test_result", os.ModePerm)
 	if err != nil {
@@ -156,7 +146,6 @@ func TestDisplayBBox(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		//want []*image.Rectangle
 	}{
 		{
 			name: "default",
@@ -189,7 +178,7 @@ func TestDisplayBBox(t *testing.T) {
 
 func TestGroupBBoxes(t *testing.T) {
 	type args struct {
-		bboxes []image.Rectangle
+		dataName string
 	}
 	tests := []struct {
 		name string
@@ -197,16 +186,43 @@ func TestGroupBBoxes(t *testing.T) {
 		want []image.Rectangle
 	}{
 		{
-			name: "data-01",
+			name: "groupbbox-01",
 			args: args{
-				bboxes: bboxes1,
+				dataName: "01",
 			},
-			want: []image.Rectangle{image.Rectangle{Min: image.Point{X: 1, Y: 2}, Max: image.Point{X: 3, Y: 4}}},
+			want: []image.Rectangle{{Min: image.Point{X: 42, Y: 20}, Max: image.Point{X: 84, Y: 57}}},
+		},
+		{
+			name: "groupbbox-02",
+			args: args{
+				dataName: "02",
+			},
+			want: []image.Rectangle{{Min: image.Point{X: 25, Y: 13}, Max: image.Point{X: 110, Y: 80}}},
+		},
+		{
+			name: "groupbbox-03",
+			args: args{
+				dataName: "03",
+			},
+			want: []image.Rectangle{{Min: image.Point{X: 0, Y: 17}, Max: image.Point{X: 35, Y: 77}}},
+		},
+		{
+			name: "groupbbox-04",
+			args: args{
+				dataName: "04",
+			},
+			want: []image.Rectangle{{Min: image.Point{X: 129, Y: 10}, Max: image.Point{X: 159, Y: 64}}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GroupBBoxes(tt.args.bboxes); !reflect.DeepEqual(got, tt.want) {
+			got := GroupBBoxes(dataBBoxes[tt.args.dataName])
+			img := gocv.NewMat()
+			defer img.Close()
+			dataImages[tt.args.dataName].CopyTo(&img)
+			drawRectangles(&img, got, color.RGBA{R: 0, G: 0, B: 255, A: 0})
+			saveImage(tt.name, &img)
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GroupBBoxes() = %v, want %v", got, tt.want)
 			}
 		})
