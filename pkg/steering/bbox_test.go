@@ -35,7 +35,7 @@ func init() {
 	dataImages = make(map[string]*gocv.Mat, len(dataNames))
 
 	for _, dataName := range dataNames {
-		img, bb, err := load_data(dataName)
+		img, bb, err := loadData(dataName)
 		if err != nil {
 			zap.S().Panicf("unable to load data test: %v", err)
 		}
@@ -61,7 +61,7 @@ func (bb *BBox) toRect(imgWidth, imgHeight int) image.Rectangle {
 	)
 }
 
-func load_data(dataName string) (*gocv.Mat, []BBox, error) {
+func loadData(dataName string) (*gocv.Mat, []BBox, error) {
 	contentBBoxes, err := os.ReadFile(fmt.Sprintf("test_data/bboxes-%s.json", dataName))
 	if err != nil {
 		return nil, []BBox{}, fmt.Errorf("unable to load json file for bbox of '%v': %w", dataName, err)
@@ -126,7 +126,7 @@ func saveImage(name string, img *gocv.Mat) error {
 }
 
 func DisplayImageAndBBoxes(dataName string) error {
-	img, bboxes, err := load_data(dataName)
+	img, bboxes, err := loadData(dataName)
 	if err != nil {
 		return fmt.Errorf("unable to load image and bboxes: %w", err)
 	}
