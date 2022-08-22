@@ -186,3 +186,35 @@ func TestCorrector_nearObject(t *testing.T) {
 		})
 	}
 }
+
+func TestNewFixesTableFromJson(t *testing.T) {
+	type args struct {
+		fileName string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *FixesTable
+		wantErr bool
+	}{
+		{
+			name: "default config",
+			args: args{
+				fileName: "test_data/config.json",
+			},
+		},
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NewFixesTableFromJson(tt.args.fileName)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewFixesTableFromJson() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewFixesTableFromJson() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -1,9 +1,11 @@
 package steering
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/cyrilix/robocar-protobuf/go/events"
 	"go.uber.org/zap"
+	"os"
 )
 
 type Corrector struct {
@@ -26,7 +28,7 @@ FixFromObjectPosition modify steering value according object positions
     60% |-----|-----|-----|-----|-----|-----|
     :   |  0  | 0.25| 0.5 |-0.5 |-0.25|  0  |
     80% |-----|-----|-----|-----|-----|-----|
-    :   |-0.25|-0.5 |  1  |  -1 |-0.5 | 0.25|
+    :   | 0.25| 0.5 |  1  |  -1 |-0.5 |-0.25|
     100%|-----|-----|-----|-----|-----|-----|
 
  2. For straight (current steering near of 0), search nearest object and if:
@@ -59,12 +61,12 @@ func (c *Corrector) FixFromObjectPosition(currentSteering float64, objects []*ev
 		}
 
 		if nearest.Left < 0 && nearest.Right < 0 {
-			return currentSteering + c.fixValues.ValueOf(currentSteering, nearest.Right)
+			return currentSteering + c.fixValues.ValueOf(currentSteering, float64(nearest.Right))
 		}
 		if nearest.Left > 0 && nearest.Right > 0 {
-			return currentSteering + c.fixValues.ValueOf(currentSteering, nearest.Left)
+			return currentSteering + c.fixValues.ValueOf(currentSteering, float64(nearest.Left))
 		}
-		return currentSteering + c.fixValues.ValueOf(currentSteering, nearest.Left+(nearest.Right-nearest.Left)/2.)
+		return currentSteering + c.fixValues.ValueOf(currentSteering, float64(nearest.Left)+(float64(nearest.Right)-float64(nearest.Left))/2.)
 	}
 
 	// Search if current steering is near of Right or Left
@@ -90,27 +92,45 @@ func (c *Corrector) nearObject(objects []*events.Object) (*events.Object, error)
 	return result, nil
 }
 
-type FixesTable struct {
-	values map[string]map[int]float64
+func NewFixesTableFromJson(fileName string) (*FixesTable, error) {
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read content from %s file: %w", fileName, err)
+	}
+	var ft FixesTable
+	err = json.Unmarshal(content, &ft)
+	if err != nil {
+		return nil, fmt.Errorf("unable to unmarshal json content from %s file: %w", fileName, err)
+	}
+	// TODO: check structure is valid
+	return &ft, nil
 }
 
-func (f *FixesTable) ValueOf(steering float64, distance float32) float64 {
-	var key string
-	if steering < -0.66 {
-		key = "<-0.66"
-	} else if steering < -0.33 {
-		key = "-0.66:-0.33"
-	} else if steering < 0 {
-		key = "-0.33:0"
-	} else if steering < 0.33 {
-		key = "0:0.33"
-	} else if steering < 0.66 {
-		key = "0.33:0.66"
-	} else {
-		key = ">= 0.66"
+type FixesTable struct {
+	DistanceSteps []float64   `json:"distance_steps"`
+	SteeringSteps []float64   `json:"steering_steps"`
+	Data          [][]float64 `json:"data"`
+}
+
+func (f *FixesTable) ValueOf(steering float64, distance float64) float64 {
+	// search column index
+	var idxCol int
+	// Start loop at 1 because first column should be skipped
+	for i := 1; i < len(f.SteeringSteps); i++ {
+		if steering < f.SteeringSteps[i] {
+			idxCol = i - 1
+			break
+		}
 	}
 
-	keyDistance := int(distance / 20)
-	return f.values[key][keyDistance]
+	var idxRow int
+	// Start loop at 1 because first column should be skipped
+	for i := 1; i < len(f.DistanceSteps); i++ {
+		if distance < f.DistanceSteps[i] {
+			idxRow = i - 1
+			break
+		}
+	}
 
+	return f.Data[idxRow][idxCol]
 }
