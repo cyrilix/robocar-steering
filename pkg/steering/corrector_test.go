@@ -41,6 +41,20 @@ var (
 	}
 )
 
+var (
+	defaultGridMap = GridMap{
+		DistanceSteps: []float64{0., 0.2, 0.4, 0.6, 0.8, 1.},
+		SteeringSteps: []float64{-1., -0.66, -0.33, 0., 0.33, 0.66, 1.},
+		Data: [][]float64{
+			{0., 0., 0., 0., 0., 0.},
+			{0., 0., 0., 0., 0., 0.},
+			{0., 0., 0.25, -0.25, 0., 0.},
+			{0., 0.25, 0.5, -0.5, -0.25, 0.},
+			{0.25, 0.5, 1, -1, -0.5, -0.25},
+		},
+	}
+)
+
 func TestCorrector_FixFromObjectPosition(t *testing.T) {
 	type args struct {
 		currentSteering float64
@@ -130,8 +144,8 @@ func TestCorrector_FixFromObjectPosition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Corrector{}
-			if got := c.FixFromObjectPosition(tt.args.currentSteering, tt.args.objects); got != tt.want {
-				t.Errorf("FixFromObjectPosition() = %v, want %v", got, tt.want)
+			if got := c.AdjustFromObjectPosition(tt.args.currentSteering, tt.args.objects); got != tt.want {
+				t.Errorf("AdjustFromObjectPosition() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -187,14 +201,14 @@ func TestCorrector_nearObject(t *testing.T) {
 	}
 }
 
-func TestNewFixesTableFromJson(t *testing.T) {
+func TestNewGridMapFromJson(t *testing.T) {
 	type args struct {
 		fileName string
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    *FixesTable
+		want    *GridMap
 		wantErr bool
 	}{
 		{
@@ -202,18 +216,183 @@ func TestNewFixesTableFromJson(t *testing.T) {
 			args: args{
 				fileName: "test_data/config.json",
 			},
+			want: &defaultGridMap,
 		},
-		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewFixesTableFromJson(tt.args.fileName)
+			got, err := NewGridMapFromJson(tt.args.fileName)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewFixesTableFromJson() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewGridMapFromJson() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(*got, *tt.want) {
+				t.Errorf("NewGridMapFromJson() got = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got.SteeringSteps, tt.want.SteeringSteps) {
+				t.Errorf("NewGridMapFromJson(), bad steering limits: got = %v, want %v", got.SteeringSteps, tt.want.SteeringSteps)
+			}
+			if !reflect.DeepEqual(got.DistanceSteps, tt.want.DistanceSteps) {
+				t.Errorf("NewGridMapFromJson(), bad distance limits: got = %v, want %v", got.DistanceSteps, tt.want.DistanceSteps)
+			}
+		})
+	}
+}
+
+func TestGridMap_ValueOf(t *testing.T) {
+	type fields struct {
+		DistanceSteps []float64
+		SteeringSteps []float64
+		Data          [][]float64
+	}
+	type args struct {
+		steering float64
+		distance float64
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    float64
+		wantErr bool
+	}{
+		{
+			name: "nominal",
+			fields: fields{
+				DistanceSteps: defaultGridMap.DistanceSteps,
+				SteeringSteps: defaultGridMap.SteeringSteps,
+				Data:          defaultGridMap.Data,
+			},
+			args: args{
+				steering: 0.,
+				distance: 0.,
+			},
+			want:    0,
+			wantErr: false,
+		},
+		{
+			name: "limit distance <",
+			fields: fields{
+				DistanceSteps: defaultGridMap.DistanceSteps,
+				SteeringSteps: defaultGridMap.SteeringSteps,
+				Data:          defaultGridMap.Data,
+			},
+			args: args{
+				steering: 0,
+				distance: 0.39999,
+			},
+			want:    0,
+			wantErr: false,
+		},
+		{
+			name: "limit distance >",
+			fields: fields{
+				DistanceSteps: defaultGridMap.DistanceSteps,
+				SteeringSteps: defaultGridMap.SteeringSteps,
+				Data:          defaultGridMap.Data,
+			},
+			args: args{
+				steering: 0,
+				distance: 0.400001,
+			},
+			want:    -0.25,
+			wantErr: false,
+		},
+		{
+			name: "limit steering <",
+			fields: fields{
+				DistanceSteps: defaultGridMap.DistanceSteps,
+				SteeringSteps: defaultGridMap.SteeringSteps,
+				Data:          defaultGridMap.Data,
+			},
+			args: args{
+				steering: -0.660001,
+				distance: 0.85,
+			},
+			want:    0.25,
+			wantErr: false,
+		},
+		{
+			name: "limit steering >",
+			fields: fields{
+				DistanceSteps: defaultGridMap.DistanceSteps,
+				SteeringSteps: defaultGridMap.SteeringSteps,
+				Data:          defaultGridMap.Data,
+			},
+			args: args{
+				steering: -0.66,
+				distance: 0.85,
+			},
+			want:    0.5,
+			wantErr: false,
+		},
+		{
+			name: "steering < min value",
+			fields: fields{
+				DistanceSteps: defaultGridMap.DistanceSteps,
+				SteeringSteps: defaultGridMap.SteeringSteps,
+				Data:          defaultGridMap.Data,
+			},
+			args: args{
+				steering: defaultGridMap.SteeringSteps[0] - 0.1,
+				distance: 0.85,
+			},
+			wantErr: true,
+		},
+		{
+			name: "steering  > max value",
+			fields: fields{
+				DistanceSteps: defaultGridMap.DistanceSteps,
+				SteeringSteps: defaultGridMap.SteeringSteps,
+				Data:          defaultGridMap.Data,
+			},
+			args: args{
+				steering: defaultGridMap.SteeringSteps[len(defaultGridMap.SteeringSteps)-1] + 0.1,
+				distance: 0.85,
+			},
+			wantErr: true,
+		},
+		{
+			name: "distance < min value",
+			fields: fields{
+				DistanceSteps: defaultGridMap.DistanceSteps,
+				SteeringSteps: defaultGridMap.SteeringSteps,
+				Data:          defaultGridMap.Data,
+			},
+			args: args{
+				steering: -0.65,
+				distance: defaultGridMap.DistanceSteps[0] - 0.1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "distance  > max value",
+			fields: fields{
+				DistanceSteps: defaultGridMap.DistanceSteps,
+				SteeringSteps: defaultGridMap.SteeringSteps,
+				Data:          defaultGridMap.Data,
+			},
+			args: args{
+				steering: -0.65,
+				distance: defaultGridMap.DistanceSteps[len(defaultGridMap.DistanceSteps)-1] + 0.1,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := &GridMap{
+				DistanceSteps: tt.fields.DistanceSteps,
+				SteeringSteps: tt.fields.SteeringSteps,
+				Data:          tt.fields.Data,
+			}
+			got, err := f.ValueOf(tt.args.steering, tt.args.distance)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValueOf() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewFixesTableFromJson() got = %v, want %v", got, tt.want)
+				t.Errorf("ValueOf() = %v, want %v", got, tt.want)
 			}
 		})
 	}

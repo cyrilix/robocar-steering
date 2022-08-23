@@ -9,11 +9,11 @@ import (
 )
 
 type Corrector struct {
-	fixValues FixesTable
+	gridMap *GridMap
 }
 
 /*
-FixFromObjectPosition modify steering value according object positions
+AdjustFromObjectPosition modify steering value according object positions
 
  1. To compute steering correction, split in image in zones and define correction value for each zone
 
@@ -40,7 +40,7 @@ FixFromObjectPosition modify steering value according object positions
  3. If current steering != 0 (turn on left or right), shift right and left values proportionnaly to current steering and
     apply 2.
 */
-func (c *Corrector) FixFromObjectPosition(currentSteering float64, objects []*events.Object) float64 {
+func (c *Corrector) AdjustFromObjectPosition(currentSteering float64, objects []*events.Object) float64 {
 	// TODO, group rectangle
 
 	if len(objects) == 0 {
@@ -60,13 +60,21 @@ func (c *Corrector) FixFromObjectPosition(currentSteering float64, objects []*ev
 			return currentSteering
 		}
 
+		var delta float64
+
 		if nearest.Left < 0 && nearest.Right < 0 {
-			return currentSteering + c.fixValues.ValueOf(currentSteering, float64(nearest.Right))
+			delta, err = c.gridMap.ValueOf(currentSteering, float64(nearest.Right))
 		}
 		if nearest.Left > 0 && nearest.Right > 0 {
-			return currentSteering + c.fixValues.ValueOf(currentSteering, float64(nearest.Left))
+			delta, err = c.gridMap.ValueOf(currentSteering, float64(nearest.Left))
+		} else {
+			delta, err = c.gridMap.ValueOf(currentSteering, float64(nearest.Left)+(float64(nearest.Right)-float64(nearest.Left))/2.)
 		}
-		return currentSteering + c.fixValues.ValueOf(currentSteering, float64(nearest.Left)+(float64(nearest.Right)-float64(nearest.Left))/2.)
+		if err != nil {
+			zap.S().Warnf("unable to compute delta to apply to steering, skip correction: %v", err)
+			delta = 0
+		}
+		return currentSteering + delta
 	}
 
 	// Search if current steering is near of Right or Left
@@ -92,12 +100,12 @@ func (c *Corrector) nearObject(objects []*events.Object) (*events.Object, error)
 	return result, nil
 }
 
-func NewFixesTableFromJson(fileName string) (*FixesTable, error) {
+func NewGridMapFromJson(fileName string) (*GridMap, error) {
 	content, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read content from %s file: %w", fileName, err)
 	}
-	var ft FixesTable
+	var ft GridMap
 	err = json.Unmarshal(content, &ft)
 	if err != nil {
 		return nil, fmt.Errorf("unable to unmarshal json content from %s file: %w", fileName, err)
@@ -106,13 +114,19 @@ func NewFixesTableFromJson(fileName string) (*FixesTable, error) {
 	return &ft, nil
 }
 
-type FixesTable struct {
+type GridMap struct {
 	DistanceSteps []float64   `json:"distance_steps"`
 	SteeringSteps []float64   `json:"steering_steps"`
 	Data          [][]float64 `json:"data"`
 }
 
-func (f *FixesTable) ValueOf(steering float64, distance float64) float64 {
+func (f *GridMap) ValueOf(steering float64, distance float64) (float64, error) {
+	if steering < f.SteeringSteps[0] || steering > f.SteeringSteps[len(f.SteeringSteps)-1] {
+		return 0., fmt.Errorf("invalid steering value: %v, must be between %v and %v", steering, f.SteeringSteps[0], f.SteeringSteps[len(f.SteeringSteps)-1])
+	}
+	if distance < f.DistanceSteps[0] || distance > f.DistanceSteps[len(f.DistanceSteps)-1] {
+		return 0., fmt.Errorf("invalid distance value: %v, must be between %v and %v", steering, f.DistanceSteps[0], f.DistanceSteps[len(f.DistanceSteps)-1])
+	}
 	// search column index
 	var idxCol int
 	// Start loop at 1 because first column should be skipped
@@ -132,5 +146,5 @@ func (f *FixesTable) ValueOf(steering float64, distance float64) float64 {
 		}
 	}
 
-	return f.Data[idxRow][idxCol]
+	return f.Data[idxRow][idxCol], nil
 }
