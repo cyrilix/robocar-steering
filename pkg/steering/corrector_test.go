@@ -39,10 +39,37 @@ var (
 		Bottom:     0.9,
 		Confidence: 0.9,
 	}
+	objectOnRightNear = events.Object{
+		Type:       events.TypeObject_ANY,
+		Left:       0.7,
+		Top:        0.8,
+		Right:      0.9,
+		Bottom:     0.9,
+		Confidence: 0.9,
+	}
+	objectOnLeftNear = events.Object{
+		Type:       events.TypeObject_ANY,
+		Left:       0.1,
+		Top:        0.8,
+		Right:      0.3,
+		Bottom:     0.9,
+		Confidence: 0.9,
+	}
 )
 
 var (
 	defaultGridMap = GridMap{
+		DistanceSteps: []float64{0., 0.2, 0.4, 0.6, 0.8, 1.},
+		SteeringSteps: []float64{-1., -0.66, -0.33, 0., 0.33, 0.66, 1.},
+		Data: [][]float64{
+			{0., 0., 0., 0., 0., 0.},
+			{0., 0., 0., 0., 0., 0.},
+			{0., 0., 0.25, -0.25, 0., 0.},
+			{0., 0.25, 0.5, -0.5, -0.25, 0.},
+			{0.25, 0.5, 1, -1, -0.5, -0.25},
+		},
+	}
+	defaultObjectFactors = GridMap{
 		DistanceSteps: []float64{0., 0.2, 0.4, 0.6, 0.8, 1.},
 		SteeringSteps: []float64{-1., -0.66, -0.33, 0., 0.33, 0.66, 1.},
 		Data: [][]float64{
@@ -128,7 +155,7 @@ func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 				currentSteering: -0.9,
 				objects:         []*events.Object{&objectOnMiddleNear},
 			},
-			want: -0.4,
+			want: -0.9,
 		},
 		{
 			name: "run to right with 1 near object",
@@ -136,10 +163,24 @@ func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 				currentSteering: 0.9,
 				objects:         []*events.Object{&objectOnMiddleNear},
 			},
-			want: 0.4,
+			want: 0.9,
 		},
-
-		// Todo Object on left/right near/distant
+		{
+			name: "run to right with 1 near object on the right",
+			args: args{
+				currentSteering: 0.9,
+				objects:         []*events.Object{&objectOnRightNear},
+			},
+			want: 0.1,
+		},
+		{
+			name: "run to left with 1 near object on the left",
+			args: args{
+				currentSteering: -0.9,
+				objects:         []*events.Object{&objectOnLeftNear},
+			},
+			want: -0.1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
