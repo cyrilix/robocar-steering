@@ -16,6 +16,10 @@ const (
 func main() {
 	var mqttBroker, username, password, clientId string
 	var steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, objectsTopic string
+	var imgWidth, imgHeight int
+	var enableObjectsCorrection, enableObjectsCorrectionOnUserMode bool
+	var gridMapConfig, objectsMoveFactorsConfig string
+	var deltaMiddle float64
 
 	mqttQos := cli.InitIntFlag("MQTT_QOS", 0)
 	_, mqttRetain := os.LookupEnv("MQTT_RETAIN")
@@ -27,7 +31,13 @@ func main() {
 	flag.StringVar(&tfSteeringTopic, "mqtt-topic-tf-steering", os.Getenv("MQTT_TOPIC_TF_STEERING"), "Mqtt topic that contains tenorflow steering value, use MQTT_TOPIC_TF_STEERING if args not set")
 	flag.StringVar(&driveModeTopic, "mqtt-topic-drive-mode", os.Getenv("MQTT_TOPIC_DRIVE_MODE"), "Mqtt topic that contains DriveMode value, use MQTT_TOPIC_DRIVE_MODE if args not set")
 	flag.StringVar(&objectsTopic, "mqtt-topic-objects", os.Getenv("MQTT_TOPIC_OBJECTS"), "Mqtt topic that contains Objects from object detection value, use MQTT_TOPIC_OBJECTS if args not set")
-
+	flag.IntVar(&imgWidth, "image-width", 160, "Video pixels width")
+	flag.IntVar(&imgHeight, "image-height", 128, "Video pixels height")
+	flag.BoolVar(&enableObjectsCorrection, "enable-objects-correction", false, "Adjust steering to avoid objects")
+	flag.BoolVar(&enableObjectsCorrectionOnUserMode, "enable-objects-correction-user", false, "Adjust steering to avoid objects on user mode driving")
+	flag.StringVar(&gridMapConfig, "grid-map-config", "", "Json file path to configure grid object correction")
+	flag.StringVar(&objectsMoveFactorsConfig, "objects-move-factors-config", "", "Json file path to configure objects move corrections")
+	flag.Float64Var(&deltaMiddle, "delta-middle", 0.1, "Half Percent zone to interpret as straight")
 	logLevel := zap.LevelFlag("log", zap.InfoLevel, "log level")
 
 	flag.Parse()
@@ -50,13 +60,36 @@ func main() {
 	}()
 	zap.ReplaceGlobals(lgr)
 
+	zap.S().Infof("steering topic                  : %s", steeringTopic)
+	zap.S().Infof("rc topic                        : %s", rcSteeringTopic)
+	zap.S().Infof("tflite steering topic           : %s", tfSteeringTopic)
+	zap.S().Infof("drive mode topic                : %s", driveModeTopic)
+	zap.S().Infof("objects topic                   : %s", objectsTopic)
+	zap.S().Infof("objects correction enabled      : %v", enableObjectsCorrection)
+	zap.S().Infof("objects correction on user mode : %v", enableObjectsCorrectionOnUserMode)
+	zap.S().Infof("grid map file config            : %v", gridMapConfig)
+	zap.S().Infof("objects move factors grid config: %v", objectsMoveFactorsConfig)
+	zap.S().Infof("image width x height            : %v x %v", imgWidth, imgHeight)
+
 	client, err := cli.Connect(mqttBroker, username, password, clientId)
 	if err != nil {
 		log.Fatalf("unable to connect to mqtt bus: %v", err)
 	}
 	defer client.Disconnect(50)
 
-	p := steering.NewController(client, steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, objectsTopic)
+	p := steering.NewController(
+		client,
+		steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, objectsTopic,
+		steering.WithCorrector(
+			steering.NewGridCorrector(
+				steering.WidthDeltaMiddle(deltaMiddle),
+				steering.WithGridMap(gridMapConfig),
+				steering.WithObjectMoveFactors(objectsMoveFactorsConfig),
+				steering.WithImageSize(imgWidth, imgHeight),
+			),
+		),
+		steering.WithObjectsCorrectionEnabled(enableObjectsCorrection, enableObjectsCorrectionOnUserMode),
+	)
 	defer p.Stop()
 
 	cli.HandleExit(p)
