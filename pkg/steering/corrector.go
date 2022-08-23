@@ -53,22 +53,17 @@ func (c *Corrector) AdjustFromObjectPosition(currentSteering float64, objects []
 		return currentSteering
 	}
 
-	if currentSteering > 0.1 && currentSteering < 0.1 {
-
-		if nearest.Bottom < 0.4 {
-			// object is far, so no need to fix steering now
-			return currentSteering
-		}
+	if currentSteering > -0.1 && currentSteering < 0.1 {
 
 		var delta float64
 
 		if nearest.Left < 0 && nearest.Right < 0 {
-			delta, err = c.gridMap.ValueOf(currentSteering, float64(nearest.Right))
+			delta, err = c.gridMap.ValueOf(float64(nearest.Right)*2-1., float64(nearest.Bottom))
 		}
 		if nearest.Left > 0 && nearest.Right > 0 {
-			delta, err = c.gridMap.ValueOf(currentSteering, float64(nearest.Left))
+			delta, err = c.gridMap.ValueOf(float64(nearest.Left)*2-1., float64(nearest.Bottom))
 		} else {
-			delta, err = c.gridMap.ValueOf(currentSteering, float64(nearest.Left)+(float64(nearest.Right)-float64(nearest.Left))/2.)
+			delta, err = c.gridMap.ValueOf(float64(float64(nearest.Left)+(float64(nearest.Right)-float64(nearest.Left))/2.)*2.-1., float64(nearest.Bottom))
 		}
 		if err != nil {
 			zap.S().Warnf("unable to compute delta to apply to steering, skip correction: %v", err)

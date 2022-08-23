@@ -55,7 +55,7 @@ var (
 	}
 )
 
-func TestCorrector_FixFromObjectPosition(t *testing.T) {
+func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 	type args struct {
 		currentSteering float64
 		objects         []*events.Object
@@ -120,7 +120,7 @@ func TestCorrector_FixFromObjectPosition(t *testing.T) {
 				currentSteering: 0.,
 				objects:         []*events.Object{&objectOnMiddleNear},
 			},
-			want: 0.5,
+			want: 1,
 		},
 		{
 			name: "run to left with 1 near object",
@@ -143,7 +143,9 @@ func TestCorrector_FixFromObjectPosition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Corrector{}
+			c := &Corrector{
+				gridMap: &defaultGridMap,
+			}
 			if got := c.AdjustFromObjectPosition(tt.args.currentSteering, tt.args.objects); got != tt.want {
 				t.Errorf("AdjustFromObjectPosition() = %v, want %v", got, tt.want)
 			}
