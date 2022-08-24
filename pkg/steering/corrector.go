@@ -40,6 +40,14 @@ AdjustFromObjectPosition modify steering value according object positions
 
  3. If current steering != 0 (turn on left or right), shift right and left values proportionnaly to current steering and
     apply 2.
+
+    :  -1   -0.66 -0.33   0    0.33  0.66   1
+    0%  |-----|-----|-----|-----|-----|-----|
+    :   |  0  |  0  |  0  |  0  |  0  |  0  |
+    20% |-----|-----|-----|-----|-----|-----|
+    :   | 0.2 | 0.1 |  0  |  0  |-0.1 |-0.2 |
+    40% |-----|-----|-----|-----|-----|-----|
+    :   | ... | ... | ... | ... | ... | ... |
 */
 func (c *Corrector) AdjustFromObjectPosition(currentSteering float64, objects []*events.Object) float64 {
 	// TODO, group rectangle
@@ -59,47 +67,31 @@ func (c *Corrector) AdjustFromObjectPosition(currentSteering float64, objects []
 	if currentSteering > -1*deltaMiddle && currentSteering < deltaMiddle {
 		// Straight
 		return currentSteering + c.computeDeviation(currentSteering, nearest)
-	}
-
-	if currentSteering < -1*deltaMiddle {
-		// Turn to left, so search to avoid collision with objects on the left
+	} else {
+		// Turn to right or left, so search to avoid collision with objects on the right
 		// Apply factor to object to move it at middle. This factor is function of distance
-		factor, err := c.objectMoveFactors.ValueOf(float64(nearest.Left), float64(nearest.Bottom))
+		factor, err := c.objectMoveFactors.ValueOf(float64(nearest.Right), float64(nearest.Bottom))
 		if err != nil {
 			zap.S().Warnf("unable to compute factor to apply to object: %v", err)
 			return currentSteering
 		}
 		objMoved := events.Object{
 			Type:       nearest.Type,
-			Left:       nearest.Left * float32(factor),
+			Left:       nearest.Left + float32(currentSteering*factor),
 			Top:        nearest.Top,
-			Right:      nearest.Right * float32(factor),
+			Right:      nearest.Right + float32(currentSteering*factor),
 			Bottom:     nearest.Bottom,
 			Confidence: nearest.Confidence,
 		}
-		return currentSteering + c.computeDeviation(currentSteering, &objMoved)
-	}
-
-	if currentSteering > deltaMiddle {
-		// Turn to right, so search to avoid collision with objects on the right
-		// Apply factor to object to move it at middle. This factor is function of distance
-		factor, err := c.objectMoveFactors.ValueOf(float64(nearest.Left), float64(nearest.Bottom))
-		if err != nil {
-			zap.S().Warnf("unable to compute factor to apply to object: %v", err)
-			return currentSteering
+		result := currentSteering + c.computeDeviation(currentSteering, &objMoved)
+		if result < -1. {
+			result = -1.
 		}
-		objMoved := events.Object{
-			Type:       nearest.Type,
-			Left:       nearest.Left * float32(factor),
-			Top:        nearest.Top,
-			Right:      nearest.Right * float32(factor),
-			Bottom:     nearest.Bottom,
-			Confidence: nearest.Confidence,
+		if result > 1. {
+			result = 1.
 		}
-		return currentSteering + c.computeDeviation(currentSteering, &objMoved)
+		return result
 	}
-
-	return currentSteering
 }
 
 func (c *Corrector) computeDeviation(currentSteering float64, nearest *events.Object) float64 {

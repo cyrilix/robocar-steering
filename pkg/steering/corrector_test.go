@@ -75,9 +75,9 @@ var (
 		Data: [][]float64{
 			{0., 0., 0., 0., 0., 0.},
 			{0., 0., 0., 0., 0., 0.},
-			{0., 0., 0.25, -0.25, 0., 0.},
-			{0., 0.25, 0.5, -0.5, -0.25, 0.},
-			{0.25, 0.5, 1, -1, -0.5, -0.25},
+			{0., 0., 0., 0., 0., 0.},
+			{0., 0.25, 0, 0, -0.25, 0.},
+			{0.5, 0.25, 0, 0, -0.5, -0.25},
 		},
 	}
 )
@@ -185,7 +185,8 @@ func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &Corrector{
-				gridMap: &defaultGridMap,
+				gridMap:           &defaultGridMap,
+				objectMoveFactors: &defaultObjectFactors,
 			}
 			if got := c.AdjustFromObjectPosition(tt.args.currentSteering, tt.args.objects); got != tt.want {
 				t.Errorf("AdjustFromObjectPosition() = %v, want %v", got, tt.want)
