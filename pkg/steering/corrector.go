@@ -8,9 +8,21 @@ import (
 	"os"
 )
 
+func NewCorrector(gridMap *GridMap, objectMoveFactors *GridMap) *Corrector {
+	return &Corrector{
+		gridMap:           gridMap,
+		objectMoveFactors: objectMoveFactors,
+		deltaMiddle:       0.1,
+		imgWidth:          160,
+		imgHeight:         120,
+	}
+}
+
 type Corrector struct {
-	gridMap           *GridMap
-	objectMoveFactors *GridMap
+	gridMap             *GridMap
+	objectMoveFactors   *GridMap
+	deltaMiddle         float64
+	imgWidth, imgHeight int
 }
 
 /*
@@ -50,23 +62,21 @@ AdjustFromObjectPosition modify steering value according object positions
     :   | ... | ... | ... | ... | ... | ... |
 */
 func (c *Corrector) AdjustFromObjectPosition(currentSteering float64, objects []*events.Object) float64 {
-	// TODO, group rectangle
-
-	var deltaMiddle = 0.1
-
 	if len(objects) == 0 {
 		return currentSteering
 	}
+	grpObjs := GroupObjects(objects, c.imgWidth, c.imgHeight)
+
 	// get nearest object
-	nearest, err := c.nearObject(objects)
+	nearest, err := c.nearObject(grpObjs)
 	if err != nil {
 		zap.S().Warnf("unexpected error on nearest seach object, ignore objects: %v", err)
 		return currentSteering
 	}
 
-	if currentSteering > -1*deltaMiddle && currentSteering < deltaMiddle {
+	if currentSteering > -1*c.deltaMiddle && currentSteering < c.deltaMiddle {
 		// Straight
-		return currentSteering + c.computeDeviation(currentSteering, nearest)
+		return currentSteering + c.computeDeviation(nearest)
 	} else {
 		// Turn to right or left, so search to avoid collision with objects on the right
 		// Apply factor to object to move it at middle. This factor is function of distance
@@ -83,7 +93,7 @@ func (c *Corrector) AdjustFromObjectPosition(currentSteering float64, objects []
 			Bottom:     nearest.Bottom,
 			Confidence: nearest.Confidence,
 		}
-		result := currentSteering + c.computeDeviation(currentSteering, &objMoved)
+		result := currentSteering + c.computeDeviation(&objMoved)
 		if result < -1. {
 			result = -1.
 		}
@@ -94,7 +104,7 @@ func (c *Corrector) AdjustFromObjectPosition(currentSteering float64, objects []
 	}
 }
 
-func (c *Corrector) computeDeviation(currentSteering float64, nearest *events.Object) float64 {
+func (c *Corrector) computeDeviation(nearest *events.Object) float64 {
 	var delta float64
 	var err error
 
@@ -110,7 +120,7 @@ func (c *Corrector) computeDeviation(currentSteering float64, nearest *events.Ob
 		zap.S().Warnf("unable to compute delta to apply to steering, skip correction: %v", err)
 		delta = 0
 	}
-	return currentSteering + delta
+	return delta
 }
 
 func (c *Corrector) nearObject(objects []*events.Object) (*events.Object, error) {

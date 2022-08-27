@@ -3,6 +3,7 @@ package steering
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/cyrilix/robocar-protobuf/go/events"
 	"go.uber.org/zap"
 	"gocv.io/x/gocv"
 	"image"
@@ -24,14 +25,16 @@ type BBox struct {
 }
 
 var (
-	dataBBoxes map[string][]image.Rectangle
-	dataImages map[string]*gocv.Mat
+	dataBBoxes  map[string][]image.Rectangle
+	dataObjects map[string][]*events.Object
+	dataImages  map[string]*gocv.Mat
 )
 
 func init() {
 	// TODO: empty img without bbox
 	dataNames := []string{"01", "02", "03", "04"}
 	dataBBoxes = make(map[string][]image.Rectangle, len(dataNames))
+	dataObjects = make(map[string][]*events.Object, len(dataNames))
 	dataImages = make(map[string]*gocv.Mat, len(dataNames))
 
 	for _, dataName := range dataNames {
@@ -40,6 +43,7 @@ func init() {
 			zap.S().Panicf("unable to load data test: %v", err)
 		}
 		dataBBoxes[dataName] = bboxesToRectangles(bb, img.Cols(), img.Rows())
+		dataObjects[dataName] = bboxesToObjects(bb)
 		dataImages[dataName] = img
 	}
 }
@@ -52,6 +56,20 @@ func bboxesToRectangles(bboxes []BBox, imgWidth, imgHeiht int) []image.Rectangle
 	return rects
 }
 
+func bboxesToObjects(bboxes []BBox) []*events.Object {
+	objects := make([]*events.Object, 0, len(bboxes))
+	for _, bb := range bboxes {
+		objects = append(objects, &events.Object{
+			Type:       events.TypeObject_ANY,
+			Left:       bb.Left,
+			Top:        bb.Top,
+			Right:      bb.Right,
+			Bottom:     bb.Bottom,
+			Confidence: bb.Confidence,
+		})
+	}
+	return objects
+}
 func (bb *BBox) toRect(imgWidth, imgHeight int) image.Rectangle {
 	return image.Rect(
 		int(bb.Left*float32(imgWidth)),
@@ -224,6 +242,62 @@ func TestGroupBBoxes(t *testing.T) {
 			saveImage(tt.name, &img)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GroupBBoxes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+func TestGroupObjects(t *testing.T) {
+	type args struct {
+		dataName string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []*events.Object
+	}{
+		{
+			name: "groupbbox-01",
+			args: args{
+				dataName: "01",
+			},
+			want: []*events.Object{
+				{Left: 0.26660156, Top: 0.1706543, Right: 0.5258789, Bottom: 0.47583008, Confidence: 0.4482422},
+			},
+		},
+		{
+			name: "groupbbox-02",
+			args: args{
+				dataName: "02",
+			},
+			want: []*events.Object{
+				{Left: 0.15625, Top: 0.108333334, Right: 0.6875, Bottom: 0.6666667, Confidence: -1},
+			},
+		},
+		{
+			name: "groupbbox-03",
+			args: args{
+				dataName: "03",
+			},
+			want: []*events.Object{
+				{Top: 0.14166667, Right: 0.21875, Bottom: 0.64166665, Confidence: -1},
+			},
+		},
+		{
+			name: "groupbbox-04",
+			args: args{
+				dataName: "04",
+			},
+			want: []*events.Object{
+				{Left: 0.80625, Top: 0.083333336, Right: 0.99375, Bottom: 0.53333336, Confidence: -1},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := dataImages[tt.args.dataName]
+			got := GroupObjects(dataObjects[tt.args.dataName], img.Cols(), img.Rows())
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GroupObjects() = %v, want %v", got, tt.want)
 			}
 		})
 	}

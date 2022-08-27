@@ -155,7 +155,7 @@ func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 				currentSteering: -0.9,
 				objects:         []*events.Object{&objectOnMiddleNear},
 			},
-			want: -0.9,
+			want: -1,
 		},
 		{
 			name: "run to right with 1 near object",
@@ -163,7 +163,7 @@ func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 				currentSteering: 0.9,
 				objects:         []*events.Object{&objectOnMiddleNear},
 			},
-			want: 0.9,
+			want: 1.,
 		},
 		{
 			name: "run to right with 1 near object on the right",
@@ -171,7 +171,7 @@ func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 				currentSteering: 0.9,
 				objects:         []*events.Object{&objectOnRightNear},
 			},
-			want: 0.1,
+			want: 1.,
 		},
 		{
 			name: "run to left with 1 near object on the left",
@@ -179,15 +179,12 @@ func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 				currentSteering: -0.9,
 				objects:         []*events.Object{&objectOnLeftNear},
 			},
-			want: -0.1,
+			want: -0.65,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Corrector{
-				gridMap:           &defaultGridMap,
-				objectMoveFactors: &defaultObjectFactors,
-			}
+			c := NewCorrector(&defaultGridMap, &defaultObjectFactors)
 			if got := c.AdjustFromObjectPosition(tt.args.currentSteering, tt.args.objects); got != tt.want {
 				t.Errorf("AdjustFromObjectPosition() = %v, want %v", got, tt.want)
 			}
