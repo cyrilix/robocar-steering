@@ -8,14 +8,80 @@ import (
 	"os"
 )
 
-func NewCorrector(gridMap *GridMap, objectMoveFactors *GridMap) *Corrector {
-	return &Corrector{
-		gridMap:           gridMap,
-		objectMoveFactors: objectMoveFactors,
+type OptionCorrector func(c *Corrector)
+
+func WithGridMap(configPath string) OptionCorrector {
+	var gm *GridMap
+	if configPath == "" {
+		zap.S().Warnf("no configuration defined for grid map, use default")
+		gm = &defaultGridMap
+	} else {
+		var err error
+		gm, err = loadConfig(configPath)
+		if err != nil {
+			zap.S().Panicf("unable to load grid-map config from file '%v': %w", configPath, err)
+		}
+	}
+	return func(c *Corrector) {
+		c.gridMap = gm
+	}
+}
+
+func WithObjectMoveFactors(configPath string) OptionCorrector {
+	var omf *GridMap
+	if configPath == "" {
+		zap.S().Warnf("no configuration defined for objects move factors, use default")
+		omf = &defaultObjectFactors
+	} else {
+		var err error
+		omf, err = loadConfig(configPath)
+		if err != nil {
+			zap.S().Panicf("unable to load objects move factors config from file '%v': %w", configPath, err)
+		}
+	}
+	return func(c *Corrector) {
+		c.objectMoveFactors = omf
+	}
+}
+
+func loadConfig(configPath string) (*GridMap, error) {
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load grid-map config from file '%v': %w", configPath, err)
+	}
+	var gm GridMap
+	err = json.Unmarshal(content, &gm)
+	if err != nil {
+		return nil, fmt.Errorf("unable to unmarshal json config '%s': %w", configPath, err)
+	}
+	return &gm, nil
+}
+
+func WithImageSize(width, height int) OptionCorrector {
+	return func(c *Corrector) {
+		c.imgWidth = width
+		c.imgHeight = height
+	}
+}
+
+func WidthDeltaMiddle(d float64) OptionCorrector {
+	return func(c *Corrector) {
+		c.deltaMiddle = d
+	}
+
+}
+func NewCorrector(options ...OptionCorrector) *Corrector {
+	c := &Corrector{
+		gridMap:           &defaultGridMap,
+		objectMoveFactors: &defaultObjectFactors,
 		deltaMiddle:       0.1,
 		imgWidth:          160,
 		imgHeight:         120,
 	}
+	for _, o := range options {
+		o(c)
+	}
+	return c
 }
 
 type Corrector struct {

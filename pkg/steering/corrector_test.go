@@ -57,31 +57,6 @@ var (
 	}
 )
 
-var (
-	defaultGridMap = GridMap{
-		DistanceSteps: []float64{0., 0.2, 0.4, 0.6, 0.8, 1.},
-		SteeringSteps: []float64{-1., -0.66, -0.33, 0., 0.33, 0.66, 1.},
-		Data: [][]float64{
-			{0., 0., 0., 0., 0., 0.},
-			{0., 0., 0., 0., 0., 0.},
-			{0., 0., 0.25, -0.25, 0., 0.},
-			{0., 0.25, 0.5, -0.5, -0.25, 0.},
-			{0.25, 0.5, 1, -1, -0.5, -0.25},
-		},
-	}
-	defaultObjectFactors = GridMap{
-		DistanceSteps: []float64{0., 0.2, 0.4, 0.6, 0.8, 1.},
-		SteeringSteps: []float64{-1., -0.66, -0.33, 0., 0.33, 0.66, 1.},
-		Data: [][]float64{
-			{0., 0., 0., 0., 0., 0.},
-			{0., 0., 0., 0., 0., 0.},
-			{0., 0., 0., 0., 0., 0.},
-			{0., 0.25, 0, 0, -0.25, 0.},
-			{0.5, 0.25, 0, 0, -0.5, -0.25},
-		},
-	}
-)
-
 func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 	type args struct {
 		currentSteering float64
@@ -184,7 +159,7 @@ func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewCorrector(&defaultGridMap, &defaultObjectFactors)
+			c := NewCorrector()
 			if got := c.AdjustFromObjectPosition(tt.args.currentSteering, tt.args.objects); got != tt.want {
 				t.Errorf("AdjustFromObjectPosition() = %v, want %v", got, tt.want)
 			}
@@ -434,6 +409,70 @@ func TestGridMap_ValueOf(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ValueOf() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithGridMap(t *testing.T) {
+	type args struct {
+		config string
+	}
+	tests := []struct {
+		name string
+		args args
+		want GridMap
+	}{
+		{
+			name: "default value",
+			args: args{config: ""},
+			want: defaultGridMap,
+		},
+		{
+			name: "load config",
+			args: args{config: "test_data/config.json"},
+			want: defaultGridMap,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := Corrector{}
+			got := WithGridMap(tt.args.config)
+			got(&c)
+			if !reflect.DeepEqual(*c.gridMap, tt.want) {
+				t.Errorf("WithGridMap() = %v, want %v", *c.gridMap, tt.want)
+			}
+		})
+	}
+}
+
+func TestWithObjectMoveFactors(t *testing.T) {
+	type args struct {
+		config string
+	}
+	tests := []struct {
+		name string
+		args args
+		want GridMap
+	}{
+		{
+			name: "default value",
+			args: args{config: ""},
+			want: defaultObjectFactors,
+		},
+		{
+			name: "load config",
+			args: args{config: "test_data/omf-config.json"},
+			want: defaultObjectFactors,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := Corrector{}
+			got := WithObjectMoveFactors(tt.args.config)
+			got(&c)
+			if !reflect.DeepEqual(*c.objectMoveFactors, tt.want) {
+				t.Errorf("WithObjectMoveFactors() = %v, want %v", *c.objectMoveFactors, tt.want)
 			}
 		})
 	}
