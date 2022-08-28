@@ -8,7 +8,10 @@ import (
 	"os"
 )
 
-type OptionCorrector func(c *Corrector)
+type Corrector interface {
+	AdjustFromObjectPosition(currentSteering float64, objects []*events.Object) float64
+}
+type OptionCorrector func(c *GridCorrector)
 
 func WithGridMap(configPath string) OptionCorrector {
 	var gm *GridMap
@@ -22,7 +25,7 @@ func WithGridMap(configPath string) OptionCorrector {
 			zap.S().Panicf("unable to load grid-map config from file '%v': %w", configPath, err)
 		}
 	}
-	return func(c *Corrector) {
+	return func(c *GridCorrector) {
 		c.gridMap = gm
 	}
 }
@@ -39,7 +42,7 @@ func WithObjectMoveFactors(configPath string) OptionCorrector {
 			zap.S().Panicf("unable to load objects move factors config from file '%v': %w", configPath, err)
 		}
 	}
-	return func(c *Corrector) {
+	return func(c *GridCorrector) {
 		c.objectMoveFactors = omf
 	}
 }
@@ -58,20 +61,20 @@ func loadConfig(configPath string) (*GridMap, error) {
 }
 
 func WithImageSize(width, height int) OptionCorrector {
-	return func(c *Corrector) {
+	return func(c *GridCorrector) {
 		c.imgWidth = width
 		c.imgHeight = height
 	}
 }
 
 func WidthDeltaMiddle(d float64) OptionCorrector {
-	return func(c *Corrector) {
+	return func(c *GridCorrector) {
 		c.deltaMiddle = d
 	}
 
 }
-func NewCorrector(options ...OptionCorrector) *Corrector {
-	c := &Corrector{
+func NewGridCorrector(options ...OptionCorrector) *GridCorrector {
+	c := &GridCorrector{
 		gridMap:           &defaultGridMap,
 		objectMoveFactors: &defaultObjectFactors,
 		deltaMiddle:       0.1,
@@ -84,7 +87,7 @@ func NewCorrector(options ...OptionCorrector) *Corrector {
 	return c
 }
 
-type Corrector struct {
+type GridCorrector struct {
 	gridMap             *GridMap
 	objectMoveFactors   *GridMap
 	deltaMiddle         float64
@@ -127,7 +130,7 @@ AdjustFromObjectPosition modify steering value according object positions
     40% |-----|-----|-----|-----|-----|-----|
     :   | ... | ... | ... | ... | ... | ... |
 */
-func (c *Corrector) AdjustFromObjectPosition(currentSteering float64, objects []*events.Object) float64 {
+func (c *GridCorrector) AdjustFromObjectPosition(currentSteering float64, objects []*events.Object) float64 {
 	if len(objects) == 0 {
 		return currentSteering
 	}
@@ -170,7 +173,7 @@ func (c *Corrector) AdjustFromObjectPosition(currentSteering float64, objects []
 	}
 }
 
-func (c *Corrector) computeDeviation(nearest *events.Object) float64 {
+func (c *GridCorrector) computeDeviation(nearest *events.Object) float64 {
 	var delta float64
 	var err error
 
@@ -189,7 +192,7 @@ func (c *Corrector) computeDeviation(nearest *events.Object) float64 {
 	return delta
 }
 
-func (c *Corrector) nearObject(objects []*events.Object) (*events.Object, error) {
+func (c *GridCorrector) nearObject(objects []*events.Object) (*events.Object, error) {
 	if len(objects) == 0 {
 		return nil, fmt.Errorf("list objects must contain at least one object")
 	}

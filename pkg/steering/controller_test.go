@@ -123,3 +123,123 @@ func TestDefaultSteering(t *testing.T) {
 		}
 	}
 }
+
+type StaticCorrector struct {
+	delta float64
+}
+
+func (s *StaticCorrector) AdjustFromObjectPosition(currentSteering float64, objects []*events.Object) float64 {
+	return s.delta
+}
+
+func TestController_Start(t *testing.T) {
+	oldRegister := registerCallbacks
+	oldPublish := publish
+	defer func() {
+		registerCallbacks = oldRegister
+		publish = oldPublish
+	}()
+	registerCallbacks = func(p *Controller) error {
+		return nil
+	}
+
+	waitPublish := sync.WaitGroup{}
+	var muEventsPublished sync.Mutex
+	eventsPublished := make(map[string][]byte)
+	publish = func(client mqtt.Client, topic string, payload *[]byte) {
+		muEventsPublished.Lock()
+		defer muEventsPublished.Unlock()
+		eventsPublished[topic] = *payload
+		waitPublish.Done()
+	}
+
+	steeringTopic := "topic/steering"
+	driveModeTopic := "topic/driveMode"
+	rcSteeringTopic := "topic/rcSteering"
+	tfSteeringTopic := "topic/tfSteering"
+	objectsTopic := "topic/objects"
+
+	type fields struct {
+		client                 mqtt.Client
+		steeringTopic          string
+		muDriveMode            sync.RWMutex
+		driveMode              events.DriveMode
+		cancel                 chan interface{}
+		driveModeTopic         string
+		rcSteeringTopic        string
+		tfSteeringTopic        string
+		objectsTopic           string
+		muObjects              sync.RWMutex
+		objects                []*events.Object
+		corrector              *GridCorrector
+		enableCorrection       bool
+		enableCorrectionOnUser bool
+	}
+	type msgEvents struct {
+		driveMode        events.DriveModeMessage
+		rcSteering       events.SteeringMessage
+		tfSteering       events.SteeringMessage
+		expectedSteering events.SteeringMessage
+		objects          events.ObjectsMessage
+	}
+
+	tests := []struct {
+		name               string
+		fields             fields
+		msgEvents          msgEvents
+		correctionOnObject float64
+		want               events.SteeringMessage
+		wantErr            bool
+	}{
+		{
+			name: "On user drive mode, none correction",
+
+			fields: fields{
+				driveMode: events.DriveMode_USER,
+			},
+			msgEvents: msgEvents{
+				driveMode:  events.DriveModeMessage{DriveMode: events.DriveMode_USER},
+				rcSteering: events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
+				tfSteering: events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
+				objects:    events.ObjectsMessage{Objects: []*events.Object{&objectOnMiddleNear}},
+			},
+			correctionOnObject: 0.5,
+			// Get rc value without correction
+			want: events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewController(nil,
+				steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, objectsTopic,
+				WithObjectsCorrectionEnabled(tt.fields.enableCorrection, tt.fields.enableCorrectionOnUser),
+				WithCorrector(&StaticCorrector{delta: tt.correctionOnObject}),
+			)
+			go c.Start()
+			defer c.Stop()
+
+			// Publish events and wait generation of new steering message
+			waitPublish.Add(1)
+			c.onDriveMode(nil, testtools.NewFakeMessageFromProtobuf(driveModeTopic, &tt.msgEvents.driveMode))
+			c.onRCSteering(nil, testtools.NewFakeMessageFromProtobuf(rcSteeringTopic, &tt.msgEvents.rcSteering))
+			c.onTFSteering(nil, testtools.NewFakeMessageFromProtobuf(tfSteeringTopic, &tt.msgEvents.tfSteering))
+			c.onObjects(nil, testtools.NewFakeMessageFromProtobuf(objectsTopic, &tt.msgEvents.objects))
+			waitPublish.Wait()
+
+			var msg events.SteeringMessage
+			muEventsPublished.Lock()
+			err := proto.Unmarshal(eventsPublished[steeringTopic], &msg)
+			if err != nil {
+				t.Errorf("unable to unmarshall response: %v", err)
+				t.Fail()
+			}
+			muEventsPublished.Unlock()
+
+			if msg.GetSteering() != tt.want.GetSteering() {
+				t.Errorf("bad msg value for mode %v: %v, wants %v", c.driveMode.String(), msg.GetSteering(), tt.want.GetSteering())
+			}
+
+		})
+	}
+}

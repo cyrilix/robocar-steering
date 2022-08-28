@@ -159,7 +159,7 @@ func TestCorrector_AdjustFromObjectPosition(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := NewCorrector()
+			c := NewGridCorrector()
 			if got := c.AdjustFromObjectPosition(tt.args.currentSteering, tt.args.objects); got != tt.want {
 				t.Errorf("AdjustFromObjectPosition() = %v, want %v", got, tt.want)
 			}
@@ -204,7 +204,7 @@ func TestCorrector_nearObject(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Corrector{}
+			c := &GridCorrector{}
 			got, err := c.nearObject(tt.args.objects)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("nearObject() error = %v, wantErr %v", err, tt.wantErr)
@@ -436,7 +436,7 @@ func TestWithGridMap(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := Corrector{}
+			c := GridCorrector{}
 			got := WithGridMap(tt.args.config)
 			got(&c)
 			if !reflect.DeepEqual(*c.gridMap, tt.want) {
@@ -468,7 +468,7 @@ func TestWithObjectMoveFactors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := Corrector{}
+			c := GridCorrector{}
 			got := WithObjectMoveFactors(tt.args.config)
 			got(&c)
 			if !reflect.DeepEqual(*c.objectMoveFactors, tt.want) {

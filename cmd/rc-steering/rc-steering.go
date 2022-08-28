@@ -81,7 +81,7 @@ func main() {
 		client,
 		steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, objectsTopic,
 		steering.WithCorrector(
-			steering.NewCorrector(
+			steering.NewGridCorrector(
 				steering.WidthDeltaMiddle(deltaMiddle),
 				steering.WithGridMap(gridMapConfig),
 				steering.WithObjectMoveFactors(objectsMoveFactorsConfig),

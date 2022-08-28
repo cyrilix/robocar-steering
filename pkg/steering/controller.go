@@ -37,7 +37,7 @@ var (
 
 type Option func(c *Controller)
 
-func WithCorrector(c *Corrector) Option {
+func WithCorrector(c Corrector) Option {
 	return func(ctrl *Controller) {
 		ctrl.corrector = c
 	}
@@ -59,7 +59,7 @@ func NewController(client mqtt.Client, steeringTopic, driveModeTopic, rcSteering
 		tfSteeringTopic: tfSteeringTopic,
 		objectsTopic:    objectsTopic,
 		driveMode:       events.DriveMode_USER,
-		corrector:       NewCorrector(),
+		corrector:       NewGridCorrector(),
 	}
 	for _, o := range options {
 		o(c)
@@ -80,7 +80,7 @@ type Controller struct {
 	muObjects sync.RWMutex
 	objects   []*events.Object
 
-	corrector              *Corrector
+	corrector              Corrector
 	enableCorrection       bool
 	enableCorrectionOnUser bool
 }
