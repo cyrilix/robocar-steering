@@ -160,18 +160,7 @@ func TestController_Start(t *testing.T) {
 	objectsTopic := "topic/objects"
 
 	type fields struct {
-		client                 mqtt.Client
-		steeringTopic          string
-		muDriveMode            sync.RWMutex
 		driveMode              events.DriveMode
-		cancel                 chan interface{}
-		driveModeTopic         string
-		rcSteeringTopic        string
-		tfSteeringTopic        string
-		objectsTopic           string
-		muObjects              sync.RWMutex
-		objects                []*events.Object
-		corrector              *GridCorrector
 		enableCorrection       bool
 		enableCorrectionOnUser bool
 	}
@@ -193,9 +182,10 @@ func TestController_Start(t *testing.T) {
 	}{
 		{
 			name: "On user drive mode, none correction",
-
 			fields: fields{
-				driveMode: events.DriveMode_USER,
+				driveMode:              events.DriveMode_USER,
+				enableCorrection:       false,
+				enableCorrectionOnUser: false,
 			},
 			msgEvents: msgEvents{
 				driveMode:  events.DriveModeMessage{DriveMode: events.DriveMode_USER},
@@ -207,6 +197,91 @@ func TestController_Start(t *testing.T) {
 			// Get rc value without correction
 			want: events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
 		},
+		{
+			name: "On pilot drive mode, none correction",
+			fields: fields{
+				driveMode:              events.DriveMode_PILOT,
+				enableCorrection:       false,
+				enableCorrectionOnUser: false,
+			},
+			msgEvents: msgEvents{
+				driveMode:  events.DriveModeMessage{DriveMode: events.DriveMode_PILOT},
+				rcSteering: events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
+				tfSteering: events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
+				objects:    events.ObjectsMessage{Objects: []*events.Object{&objectOnMiddleNear}},
+			},
+			correctionOnObject: 0.5,
+			// Get rc value without correction
+			want: events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
+		},
+		{
+			name: "On pilot drive mode, correction enabled",
+			fields: fields{
+				driveMode:              events.DriveMode_PILOT,
+				enableCorrection:       true,
+				enableCorrectionOnUser: false,
+			},
+			msgEvents: msgEvents{
+				driveMode:  events.DriveModeMessage{DriveMode: events.DriveMode_PILOT},
+				rcSteering: events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
+				tfSteering: events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
+				objects:    events.ObjectsMessage{Objects: []*events.Object{&objectOnMiddleNear}},
+			},
+			correctionOnObject: 0.5,
+			// Get rc value without correction
+			want: events.SteeringMessage{Steering: 0.5, Confidence: 1.0},
+		},
+		{
+			name: "On pilot drive mode, all corrections enabled",
+			fields: fields{
+				driveMode:              events.DriveMode_PILOT,
+				enableCorrection:       true,
+				enableCorrectionOnUser: true,
+			},
+			msgEvents: msgEvents{
+				driveMode:  events.DriveModeMessage{DriveMode: events.DriveMode_PILOT},
+				rcSteering: events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
+				tfSteering: events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
+				objects:    events.ObjectsMessage{Objects: []*events.Object{&objectOnMiddleNear}},
+			},
+			correctionOnObject: 0.5,
+			// Get rc value without correction
+			want: events.SteeringMessage{Steering: 0.5, Confidence: 1.0},
+		},
+		{
+			name: "On user drive mode, only correction PILOT enabled",
+			fields: fields{
+				driveMode:              events.DriveMode_PILOT,
+				enableCorrection:       true,
+				enableCorrectionOnUser: false,
+			},
+			msgEvents: msgEvents{
+				driveMode:  events.DriveModeMessage{DriveMode: events.DriveMode_USER},
+				rcSteering: events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
+				tfSteering: events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
+				objects:    events.ObjectsMessage{Objects: []*events.Object{&objectOnMiddleNear}},
+			},
+			correctionOnObject: 0.5,
+			// Get rc value without correction
+			want: events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
+		},
+		{
+			name: "On user drive mode, all corrections enabled",
+			fields: fields{
+				driveMode:              events.DriveMode_USER,
+				enableCorrection:       true,
+				enableCorrectionOnUser: true,
+			},
+			msgEvents: msgEvents{
+				driveMode:  events.DriveModeMessage{DriveMode: events.DriveMode_USER},
+				rcSteering: events.SteeringMessage{Steering: 0.3, Confidence: 1.0},
+				tfSteering: events.SteeringMessage{Steering: 0.4, Confidence: 1.0},
+				objects:    events.ObjectsMessage{Objects: []*events.Object{&objectOnMiddleNear}},
+			},
+			correctionOnObject: 0.5,
+			// Get rc value without correction
+			want: events.SteeringMessage{Steering: 0.5, Confidence: 1.0},
+		},
 	}
 
 	for _, tt := range tests {
@@ -217,7 +292,7 @@ func TestController_Start(t *testing.T) {
 				WithCorrector(&StaticCorrector{delta: tt.correctionOnObject}),
 			)
 			go c.Start()
-			defer c.Stop()
+			time.Sleep(1 * time.Millisecond)
 
 			// Publish events and wait generation of new steering message
 			waitPublish.Add(1)
