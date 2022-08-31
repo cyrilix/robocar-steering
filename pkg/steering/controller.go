@@ -186,6 +186,7 @@ func (c *Controller) onTFSteering(_ mqtt.Client, message mqtt.Message) {
 func (c *Controller) adjustSteering(evt *events.SteeringMessage) ([]byte, error) {
 	steering := float64(evt.GetSteering())
 	steering = c.corrector.AdjustFromObjectPosition(steering, c.Objects())
+	zap.S().Debugf("adjust steering to avoid objects: %v -> %v", evt.GetSteering(), steering)
 	evt.Steering = float32(steering)
 	// override payload content
 	payload, err := proto.Marshal(evt)
