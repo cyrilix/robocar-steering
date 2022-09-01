@@ -139,7 +139,7 @@ func (c *GridCorrector) AdjustFromObjectPosition(currentSteering float64, object
 	// get nearest object
 	nearest, err := c.nearObject(grpObjs)
 	if err != nil {
-		zap.S().Warnf("unexpected error on nearest seach object, ignore objects: %v", err)
+		zap.S().Warnf("unexpected error on nearest search object, ignore objects: %v", err)
 		return currentSteering
 	}
 
@@ -177,6 +177,7 @@ func (c *GridCorrector) computeDeviation(nearest *events.Object) float64 {
 	var delta float64
 	var err error
 
+	zap.S().Debugf("search delta value for bottom limit: %v", nearest.Bottom)
 	if nearest.Left < 0 && nearest.Right < 0 {
 		delta, err = c.gridMap.ValueOf(float64(nearest.Right)*2-1., float64(nearest.Bottom))
 	}
@@ -189,6 +190,7 @@ func (c *GridCorrector) computeDeviation(nearest *events.Object) float64 {
 		zap.S().Warnf("unable to compute delta to apply to steering, skip correction: %v", err)
 		delta = 0
 	}
+	zap.S().Debugf("new deviation computed: %v", delta)
 	return delta
 }
 
