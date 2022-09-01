@@ -131,6 +131,7 @@ AdjustFromObjectPosition modify steering value according object positions
     :   | ... | ... | ... | ... | ... | ... |
 */
 func (c *GridCorrector) AdjustFromObjectPosition(currentSteering float64, objects []*events.Object) float64 {
+	zap.S().Debugf("%v objects to avoid", len(objects))
 	if len(objects) == 0 {
 		return currentSteering
 	}

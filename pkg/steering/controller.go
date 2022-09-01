@@ -112,6 +112,7 @@ func (c *Controller) onObjects(_ mqtt.Client, message mqtt.Message) {
 	c.muObjects.Lock()
 	defer c.muObjects.Unlock()
 	c.objects = msg.GetObjects()
+	zap.S().Debugf("%v object(s) received", len(c.objects))
 }
 
 func (c *Controller) onDriveMode(_ mqtt.Client, message mqtt.Message) {
@@ -201,6 +202,7 @@ func (c *Controller) Objects() []*events.Object {
 	defer c.muObjects.RUnlock()
 	res := make([]*events.Object, 0, len(c.objects))
 	copy(res, c.objects)
+	zap.S().Debugf("copy object from %v to %v", c.objects, res)
 	return res
 }
 
