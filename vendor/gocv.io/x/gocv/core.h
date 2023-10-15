@@ -379,6 +379,7 @@ void Mat_DFT(Mat m, Mat dst, int flags);
 void Mat_Divide(Mat src1, Mat src2, Mat dst);
 bool Mat_Eigen(Mat src, Mat eigenvalues, Mat eigenvectors);
 void Mat_EigenNonSymmetric(Mat src, Mat eigenvalues, Mat eigenvectors);
+void Mat_PCACompute(Mat src, Mat mean, Mat eigenvectors, Mat eigenvalues, int maxComponents);
 void Mat_Exp(Mat src, Mat dst);
 void Mat_ExtractChannel(Mat src, Mat dst, int coi);
 void Mat_FindNonZero(Mat src, Mat idx);
@@ -417,6 +418,8 @@ bool Mat_Solve(Mat src1, Mat src2, Mat dst, int flags);
 int Mat_SolveCubic(Mat coeffs, Mat roots);
 double Mat_SolvePoly(Mat coeffs, Mat roots, int maxIters);
 void Mat_Reduce(Mat src, Mat dst, int dim, int rType, int dType);
+void Mat_ReduceArgMax(Mat src, Mat dst, int axis, bool lastIndex);
+void Mat_ReduceArgMin(Mat src, Mat dst, int axis, bool lastIndex);
 void Mat_Repeat(Mat src, int nY, int nX, Mat dst);
 void Mat_ScaleAdd(Mat src1, double alpha, Mat src2, Mat dst);
 void Mat_SetIdentity(Mat src, double scalar);
@@ -511,6 +514,9 @@ int Points3fVector_Size(Points3fVector ps);
 Point3fVector Points3fVector_At(Points3fVector ps, int idx);
 void Points3fVector_Append(Points3fVector psv, Point3fVector pv);
 void Points3fVector_Close(Points3fVector ps);
+
+void SetNumThreads(int n);
+int GetNumThreads();
 
 #ifdef __cplusplus
 }

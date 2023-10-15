@@ -9,7 +9,7 @@ require (
 	github.com/cyrilix/robocar-protobuf/go v1.4.0
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 	go.uber.org/zap v1.26.0
-	gocv.io/x/gocv v0.31.0
+	gocv.io/x/gocv v0.35.0
 	google.golang.org/protobuf v1.31.0
 )
 
