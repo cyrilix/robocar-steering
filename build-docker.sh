@@ -6,7 +6,7 @@ TAG=$(git describe)
 FULL_IMAGE_NAME=docker.io/cyrilix/${IMAGE_NAME}:${TAG}
 OPENCV_VERSION=4.6.0
 SRC_CMD=./cmd/$BINARY_NAME
-GOLANG_VERSION=1.19
+GOLANG_VERSION=1.21
 
 image_build(){
   local containerName=builder

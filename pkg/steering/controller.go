@@ -158,7 +158,7 @@ func (c *Controller) onRCSteering(_ mqtt.Client, message mqtt.Message) {
 func (c *Controller) onTFSteering(_ mqtt.Client, message mqtt.Message) {
 	c.muDriveMode.RLock()
 	defer c.muDriveMode.RUnlock()
-	if c.driveMode != events.DriveMode_PILOT {
+	if c.driveMode != events.DriveMode_PILOT && c.driveMode != events.DriveMode_COPILOT {
 		// User mode, skip new message
 		return
 	}
