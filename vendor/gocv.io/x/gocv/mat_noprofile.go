@@ -1,4 +1,3 @@
-//go:build !matprofile
 // +build !matprofile
 
 package gocv

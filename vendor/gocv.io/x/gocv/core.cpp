@@ -504,10 +504,6 @@ void Mat_EigenNonSymmetric(Mat src, Mat eigenvalues, Mat eigenvectors) {
     cv::eigenNonSymmetric(*src, *eigenvalues, *eigenvectors);
 }
 
-void Mat_PCACompute(Mat src, Mat mean, Mat eigenvectors, Mat eigenvalues, int maxComponents) {
-    cv::PCACompute(*src, *mean, *eigenvectors, *eigenvalues, maxComponents);
-}
-
 void Mat_Exp(Mat src, Mat dst) {
     cv::exp(*src, *dst);
 }
@@ -693,15 +689,6 @@ double Mat_SolvePoly(Mat coeffs, Mat roots, int maxIters) {
 void Mat_Reduce(Mat src, Mat dst, int dim, int rType, int dType) {
     cv::reduce(*src, *dst, dim, rType, dType);
 }
-
-void Mat_ReduceArgMax(Mat src, Mat dst, int axis, bool lastIndex) {
-    cv::reduceArgMax(*src, *dst, axis, lastIndex);
-}
-
-void Mat_ReduceArgMin(Mat src, Mat dst, int axis, bool lastIndex) {
-    cv::reduceArgMin(*src, *dst, axis, lastIndex);
-}
-
 
 void Mat_Repeat(Mat src, int nY, int nX, Mat dst) {
     cv::repeat(*src, nY, nX, *dst);
@@ -1158,10 +1145,3 @@ void Points3fVector_Close(Points3fVector ps) {
     delete ps;
 }
 
-void SetNumThreads(int n) {
-    cv::setNumThreads(n);
-}
-
-int GetNumThreads() {
-    return cv::getNumThreads();
-}

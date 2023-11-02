@@ -97,6 +97,7 @@ func EstimateNewCameraMatrixForUndistortRectify(k, d Mat, imgSize image.Point, r
 //
 // For further details, please see:
 // https://docs.opencv.org/master/d9/d0c/group__calib3d.html#ga7dfb72c9cf9780a347fbe3d1c47e5d5a
+//
 func InitUndistortRectifyMap(cameraMatrix Mat, distCoeffs Mat, r Mat, newCameraMatrix Mat, size image.Point, m1type int, map1 Mat, map2 Mat) {
 	sz := C.struct_Size{
 		width:  C.int(size.X),
@@ -109,6 +110,7 @@ func InitUndistortRectifyMap(cameraMatrix Mat, distCoeffs Mat, r Mat, newCameraM
 //
 // For further details, please see:
 // https://docs.opencv.org/master/d9/d0c/group__calib3d.html#ga7a6c4e032c97f03ba747966e6ad862b1
+//
 func GetOptimalNewCameraMatrixWithParams(cameraMatrix Mat, distCoeffs Mat, imageSize image.Point, alpha float64, newImgSize image.Point, centerPrincipalPoint bool) (Mat, image.Rectangle) {
 	sz := C.struct_Size{
 		width:  C.int(imageSize.X),
@@ -126,6 +128,7 @@ func GetOptimalNewCameraMatrixWithParams(cameraMatrix Mat, distCoeffs Mat, image
 //
 // For further details, please see:
 // https://docs.opencv.org/master/d9/d0c/group__calib3d.html#ga3207604e4b1a1758aa66acb6ed5aa65d
+//
 func CalibrateCamera(objectPoints Points3fVector, imagePoints Points2fVector, imageSize image.Point,
 	cameraMatrix *Mat, distCoeffs *Mat, rvecs *Mat, tvecs *Mat, calibFlag CalibFlag) float64 {
 	sz := C.struct_Size{
@@ -178,6 +181,7 @@ const (
 //
 // For further details, please see:
 // https://docs.opencv.org/master/d9/d0c/group__calib3d.html#ga93efa9b0aa890de240ca32b11253dd4a
+//
 func FindChessboardCorners(image Mat, patternSize image.Point, corners *Mat, flags CalibCBFlag) bool {
 	sz := C.struct_Size{
 		width:  C.int(patternSize.X),
@@ -190,6 +194,7 @@ func FindChessboardCorners(image Mat, patternSize image.Point, corners *Mat, fla
 //
 // For further details, please see:
 // https://docs.opencv.org/master/d9/d0c/group__calib3d.html#gadc5bcb05cb21cf1e50963df26986d7c9
+//
 func FindChessboardCornersSB(image Mat, patternSize image.Point, corners *Mat, flags CalibCBFlag) bool {
 	sz := C.struct_Size{
 		width:  C.int(patternSize.X),
@@ -202,6 +207,7 @@ func FindChessboardCornersSB(image Mat, patternSize image.Point, corners *Mat, f
 //
 // For further details, please see:
 // https://docs.opencv.org/master/d9/d0c/group__calib3d.html#ga93efa9b0aa890de240ca32b11253dd4a
+//
 func FindChessboardCornersSBWithMeta(image Mat, patternSize image.Point, corners *Mat, flags CalibCBFlag, meta *Mat) bool {
 	sz := C.struct_Size{
 		width:  C.int(patternSize.X),
@@ -214,6 +220,7 @@ func FindChessboardCornersSBWithMeta(image Mat, patternSize image.Point, corners
 //
 // For further details, please see:
 // https://docs.opencv.org/master/d9/d0c/group__calib3d.html#ga6a10b0bb120c4907e5eabbcd22319022
+//
 func DrawChessboardCorners(image *Mat, patternSize image.Point, corners Mat, patternWasFound bool) {
 	sz := C.struct_Size{
 		width:  C.int(patternSize.X),
@@ -229,16 +236,6 @@ func DrawChessboardCorners(image *Mat, patternSize image.Point, corners Mat, pat
 // https://docs.opencv.org/master/d9/d0c/group__calib3d.html#gad767faff73e9cbd8b9d92b955b50062d
 func EstimateAffinePartial2D(from, to Point2fVector) Mat {
 	return newMat(C.EstimateAffinePartial2D(from.p, to.p))
-}
-
-// EstimateAffinePartial2DWithParams computes an optimal limited affine transformation
-// with 4 degrees of freedom between two 2D point sets
-// with additional optional parameters.
-//
-// For further details, please see:
-// https://docs.opencv.org/master/d9/d0c/group__calib3d.html#gad767faff73e9cbd8b9d92b955b50062d
-func EstimateAffinePartial2DWithParams(from Point2fVector, to Point2fVector, inliers Mat, method int, ransacReprojThreshold float64, maxIters uint, confidence float64, refineIters uint) Mat {
-	return newMat(C.EstimateAffinePartial2DWithParams(from.p, to.p, inliers.p, C.int(method), C.double(ransacReprojThreshold), C.size_t(maxIters), C.double(confidence), C.size_t(refineIters)))
 }
 
 // EstimateAffine2D Computes an optimal affine transformation between two 2D point sets.

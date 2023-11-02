@@ -1,4 +1,3 @@
-//go:build openvino
 // +build openvino
 
 package gocv
@@ -18,6 +17,7 @@ import "C"
 //
 // For further details, please see:
 // https://docs.opencv.org/trunk/db/d30/classcv_1_1dnn_1_1Net.html#a814890154ea9e10b132fec00b6f6ba30
+//
 func (net *Net) ForwardAsync(outputName string) AsyncArray {
 	cName := C.CString(outputName)
 	defer C.free(unsafe.Pointer(cName))
