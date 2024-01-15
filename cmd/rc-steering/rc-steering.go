@@ -86,6 +86,7 @@ func main() {
 				steering.WithGridMap(gridMapConfig),
 				steering.WithObjectMoveFactors(objectsMoveFactorsConfig),
 				steering.WithImageSize(imgWidth, imgHeight),
+				steering.WithSizeThreshold(0.75),
 			),
 		),
 		steering.WithObjectsCorrectionEnabled(enableObjectsCorrection, enableObjectsCorrectionOnUserMode),

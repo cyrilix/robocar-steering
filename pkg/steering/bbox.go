@@ -45,6 +45,11 @@ func objectToRect(object *events.Object, imgWidth, imgHeight int) *image.Rectang
 	return &r
 }
 
+func sizeObject(object *events.Object, imgWidth, imgHeight int) float64 {
+	r := objectToRect(object, imgWidth, imgHeight)
+	return float64(r.Dx()) * float64(r.Dy())
+}
+
 func rectToObject(r *image.Rectangle, imgWidth, imgHeight int) *events.Object {
 	return &events.Object{
 		Type:       events.TypeObject_ANY,
