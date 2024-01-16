@@ -140,6 +140,7 @@ AdjustFromObjectPosition modify steering value according object positions
 */
 func (c *GridCorrector) AdjustFromObjectPosition(currentSteering float64, objs []*events.Object) float64 {
 	objects := c.filter_big_objects(objs, c.imgWidth, c.imgHeight, c.sizeThreshold)
+	objects = c.filter_bottom_images(objects)
 
 	zap.S().Debugf("%v objects to avoid", len(objects))
 	if len(objects) == 0 {
@@ -228,6 +229,16 @@ func (c *GridCorrector) filter_big_objects(objts []*events.Object, imgWidth int,
 	sizeLimit := float64(imgWidth*imgHeight) * sizeThreshold
 	for _, o := range objts {
 		if sizeObject(o, imgWidth, imgHeight) < sizeLimit {
+			objectFiltred = append(objectFiltred, o)
+		}
+	}
+	return objectFiltred
+}
+
+func (c *GridCorrector) filter_bottom_images(objts []*events.Object) []*events.Object {
+	objectFiltred := make([]*events.Object, 0, len(objts))
+	for _, o := range objts {
+		if o.Top > 0.90 {
 			objectFiltred = append(objectFiltred, o)
 		}
 	}
