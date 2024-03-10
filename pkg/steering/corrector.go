@@ -60,33 +60,17 @@ func loadConfig(configPath string) (*GridMap, error) {
 	return &gm, nil
 }
 
-func WithImageSize(width, height int) OptionCorrector {
-	return func(c *GridCorrector) {
-		c.imgWidth = width
-		c.imgHeight = height
-	}
-}
-
-func WithSizeThreshold(sizeThreshold float64) OptionCorrector {
-	return func(c *GridCorrector) {
-		c.sizeThreshold = sizeThreshold
-	}
-}
-
 func WidthDeltaMiddle(d float64) OptionCorrector {
 	return func(c *GridCorrector) {
 		c.deltaMiddle = d
 	}
-
 }
+
 func NewGridCorrector(options ...OptionCorrector) *GridCorrector {
 	c := &GridCorrector{
 		gridMap:           &defaultGridMap,
 		objectMoveFactors: &defaultObjectFactors,
 		deltaMiddle:       0.1,
-		imgWidth:          160,
-		imgHeight:         120,
-		sizeThreshold:     0.75,
 	}
 	for _, o := range options {
 		o(c)
@@ -95,11 +79,9 @@ func NewGridCorrector(options ...OptionCorrector) *GridCorrector {
 }
 
 type GridCorrector struct {
-	gridMap             *GridMap
-	objectMoveFactors   *GridMap
-	deltaMiddle         float64
-	imgWidth, imgHeight int
-	sizeThreshold       float64
+	gridMap           *GridMap
+	objectMoveFactors *GridMap
+	deltaMiddle       float64
 }
 
 /*
@@ -139,21 +121,15 @@ AdjustFromObjectPosition modify steering value according object positions
     :   | ... | ... | ... | ... | ... | ... |
 */
 func (c *GridCorrector) AdjustFromObjectPosition(currentSteering float64, objs []*events.Object) float64 {
-	objects := c.filter_big_objects(objs, c.imgWidth, c.imgHeight, c.sizeThreshold)
-	objects = c.filter_bottom_images(objects)
+	objects := objs
 
 	zap.S().Debugf("%v objects to avoid", len(objects))
 	if len(objects) == 0 {
 		return currentSteering
 	}
-	grpObjs := GroupObjects(objects, c.imgWidth, c.imgHeight)
 
 	// get nearest object
-	nearest, err := c.nearObject(grpObjs)
-	if err != nil {
-		zap.S().Warnf("unexpected error on nearest search object, ignore objects: %v", err)
-		return currentSteering
-	}
+	nearest := objs[0]
 
 	if currentSteering > -1*c.deltaMiddle && currentSteering < c.deltaMiddle {
 		// Straight
@@ -204,45 +180,6 @@ func (c *GridCorrector) computeDeviation(nearest *events.Object) float64 {
 	}
 	zap.S().Debugf("new deviation computed: %v", delta)
 	return delta
-}
-
-func (c *GridCorrector) nearObject(objects []*events.Object) (*events.Object, error) {
-	if len(objects) == 0 {
-		return nil, fmt.Errorf("list objects must contain at least one object")
-	}
-	if len(objects) == 1 {
-		return objects[0], nil
-	}
-
-	var result *events.Object
-	for _, obj := range objects {
-		if result == nil || obj.Bottom > result.Bottom {
-			result = obj
-			continue
-		}
-	}
-	return result, nil
-}
-
-func (c *GridCorrector) filter_big_objects(objts []*events.Object, imgWidth int, imgHeight int, sizeThreshold float64) []*events.Object {
-	objectFiltred := make([]*events.Object, 0, len(objts))
-	sizeLimit := float64(imgWidth*imgHeight) * sizeThreshold
-	for _, o := range objts {
-		if sizeObject(o, imgWidth, imgHeight) < sizeLimit {
-			objectFiltred = append(objectFiltred, o)
-		}
-	}
-	return objectFiltred
-}
-
-func (c *GridCorrector) filter_bottom_images(objts []*events.Object) []*events.Object {
-	objectFiltred := make([]*events.Object, 0, len(objts))
-	for _, o := range objts {
-		if o.Top > 0.90 {
-			objectFiltred = append(objectFiltred, o)
-		}
-	}
-	return objectFiltred
 }
 
 func NewGridMapFromJson(fileName string) (*GridMap, error) {

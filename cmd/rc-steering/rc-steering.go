@@ -16,7 +16,6 @@ const (
 func main() {
 	var mqttBroker, username, password, clientId string
 	var steeringTopic, driveModeTopic, rcSteeringTopic, tfSteeringTopic, objectsTopic string
-	var imgWidth, imgHeight int
 	var enableObjectsCorrection, enableObjectsCorrectionOnUserMode bool
 	var gridMapConfig, objectsMoveFactorsConfig string
 	var deltaMiddle float64
@@ -31,8 +30,6 @@ func main() {
 	flag.StringVar(&tfSteeringTopic, "mqtt-topic-tf-steering", os.Getenv("MQTT_TOPIC_TF_STEERING"), "Mqtt topic that contains tenorflow steering value, use MQTT_TOPIC_TF_STEERING if args not set")
 	flag.StringVar(&driveModeTopic, "mqtt-topic-drive-mode", os.Getenv("MQTT_TOPIC_DRIVE_MODE"), "Mqtt topic that contains DriveMode value, use MQTT_TOPIC_DRIVE_MODE if args not set")
 	flag.StringVar(&objectsTopic, "mqtt-topic-objects", os.Getenv("MQTT_TOPIC_OBJECTS"), "Mqtt topic that contains Objects from object detection value, use MQTT_TOPIC_OBJECTS if args not set")
-	flag.IntVar(&imgWidth, "image-width", 160, "Video pixels width")
-	flag.IntVar(&imgHeight, "image-height", 128, "Video pixels height")
 	flag.BoolVar(&enableObjectsCorrection, "enable-objects-correction", false, "Adjust steering to avoid objects")
 	flag.BoolVar(&enableObjectsCorrectionOnUserMode, "enable-objects-correction-user", false, "Adjust steering to avoid objects on user mode driving")
 	flag.StringVar(&gridMapConfig, "grid-map-config", "", "Json file path to configure grid object correction")
@@ -69,7 +66,6 @@ func main() {
 	zap.S().Infof("objects correction on user mode : %v", enableObjectsCorrectionOnUserMode)
 	zap.S().Infof("grid map file config            : %v", gridMapConfig)
 	zap.S().Infof("objects move factors grid config: %v", objectsMoveFactorsConfig)
-	zap.S().Infof("image width x height            : %v x %v", imgWidth, imgHeight)
 
 	client, err := cli.Connect(mqttBroker, username, password, clientId)
 	if err != nil {
@@ -85,8 +81,6 @@ func main() {
 				steering.WidthDeltaMiddle(deltaMiddle),
 				steering.WithGridMap(gridMapConfig),
 				steering.WithObjectMoveFactors(objectsMoveFactorsConfig),
-				steering.WithImageSize(imgWidth, imgHeight),
-				steering.WithSizeThreshold(0.75),
 			),
 		),
 		steering.WithObjectsCorrectionEnabled(enableObjectsCorrection, enableObjectsCorrectionOnUserMode),
