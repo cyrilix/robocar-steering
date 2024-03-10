@@ -3,7 +3,7 @@
 IMAGE_NAME=robocar-steering
 TAG=$(git describe)
 FULL_IMAGE_NAME=docker.io/cyrilix/${IMAGE_NAME}:${TAG}
-BINARY_NAME=rc-steering
+BINARY=rc-steering
 
 GOTAGS="-tags netgo"
 
@@ -31,8 +31,8 @@ image_build(){
 
   buildah --os "$GOOS" --arch "$GOARCH" $VARIANT  --name "$containerName" from gcr.io/distroless/static
   buildah config --user 1234 "$containerName"
-  buildah copy "$containerName" "build/${BINARY}.${binary_suffix}" /go/bin/$BINARY
-  buildah config --entrypoint '["/go/bin/'$BINARY'"]' "${containerName}"
+  buildah copy "$containerName" "build/${BINARY}.${binary_suffix}" /bin/$BINARY
+  buildah config --entrypoint '["/bin/'$BINARY'"]' "${containerName}"
 
   buildah commit --rm --manifest $IMAGE_NAME "${containerName}" "${containerName}"
 }
