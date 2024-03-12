@@ -202,7 +202,8 @@ func (c *Controller) Objects() []*events.Object {
 	defer c.muObjects.RUnlock()
 	res := make([]*events.Object, 0, len(c.objects))
 	for _, o := range c.objects {
-		res = append(res, o)
+		oCpy := o
+		res = append(res, oCpy)
 	}
 	zap.S().Debugf("copy object from %v to %v", c.objects, res)
 	return res
